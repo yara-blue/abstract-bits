@@ -281,7 +281,7 @@ macro_rules! write_primitive {
             if self.pos + n_bits > self.buf.len() {
                 Err(BufferTooSmall {
                     n_bits,
-                    bits_needed: self.buf.len() - (self.pos + n_bits),
+                    bits_needed: (self.pos + n_bits) - self.buf.len(),
                 })
             } else {
                 self.buf[self.pos..self.pos + n_bits].copy_from_bitslice(&val[..n_bits]);
