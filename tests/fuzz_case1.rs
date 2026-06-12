@@ -45,8 +45,6 @@ fn test_test_case() {
 fn test_input() -> Frame {
     Frame {
         header: 9,
-        has_source: true,
-        data_len: 31,
         ty: Type::System,
         source: Some(63479),
         data: vec![

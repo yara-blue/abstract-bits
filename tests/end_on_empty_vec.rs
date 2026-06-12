@@ -13,7 +13,6 @@ struct LinkStatusCommand {
 #[test]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bytes = LinkStatusCommand {
-        list_length: 0,
         is_first_frame: false,
         is_last_frame: true,
         link_statuses: Vec::new(),

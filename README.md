@@ -45,7 +45,6 @@ struct LinkStatus {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bytes = LinkStatusCommand {
-        link_statuses_len: 0,
         is_first_frame: false,
         is_last_frame: true,
         link_statuses: Vec::new(),
@@ -120,8 +119,6 @@ enum Type {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bytes = Frame {
         header: 12,
-        has_source: true,
-        data_len: 1,
         frame_type: Type::default(),
         source: Some(4243),
         data: vec![Message {

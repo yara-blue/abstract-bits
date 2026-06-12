@@ -63,8 +63,6 @@ fn test_nwk_route_reply_command() {
             originator_nwk: Nwk(0x5F37),
             responder_nwk: Nwk(0x930A),
             path_cost: 3,
-            has_originator_eui64: true,
-            has_responder_eui64: true,
             originator_eui64: Some(dbg!(Eui64::from_hex("00:17:88:01:05:21:38:71"))),
             responder_eui64: Some(dbg!(Eui64::from_hex("00:17:88:01:0b:1f:d3:ae"))),
         }
@@ -105,7 +103,6 @@ fn test_nwk_link_status_command() {
     assert_eq!(
         command,
         NwkLinkStatusCommand {
-            link_statuses_len: 2,
             is_first_frame: true, // byte 0x62 -> 0b01100010
             is_last_frame: true,
             link_statuses: vec![
@@ -216,7 +213,6 @@ fn test_nested_nwk_header() {
             source_ieee: None,
             multicast_control: None,
             source_route: Some(NwkSourceRoute {
-                relay_count: 1,
                 relay_index: 0,
                 relays: vec![Nwk(0xf939)],
             }),

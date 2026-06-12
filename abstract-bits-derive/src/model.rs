@@ -90,6 +90,11 @@ pub enum Field {
         inner_type: syn::Type,
         field: syn::Field,
     },
+    HiddenController {
+        field: NormalField,
+        controlled: Ident,
+        presence: bool,
+    },
     PaddBits(u8),
 }
 
@@ -426,6 +431,7 @@ impl Model {
                 let field = Field::from(item, &fields);
                 fields.push(field);
             }
+            hide_same_struct_controllers(&mut fields);
             Type::NormalStruct(fields)
         };
 
@@ -435,6 +441,52 @@ impl Model {
             ident: item.ident,
             ty,
         }
+    }
+}
+
+fn hide_same_struct_controllers(fields: &mut [Field]) {
+    let mut controllers: Vec<(Ident, Ident, bool)> = Vec::new();
+    for field in fields.iter() {
+        let (controller, controlled, presence) = match field {
+            Field::Option {
+                controller,
+                full_type,
+                ..
+            } => (controller, &full_type.ident, true),
+            Field::List {
+                controller,
+                full_type,
+                ..
+            } => (controller, &full_type.ident, false),
+            _ => continue,
+        };
+        if let Some(ident) = same_struct_controller(controller) {
+            controllers.push((ident.clone(), controlled.clone(), presence));
+        }
+    }
+
+    for field in fields.iter_mut() {
+        let Field::Normal(normal) = field else {
+            continue;
+        };
+        if let Some((_, controlled, presence)) =
+            controllers.iter().find(|(ident, ..)| *ident == normal.ident)
+        {
+            *field = Field::HiddenController {
+                field: normal.clone(),
+                controlled: controlled.clone(),
+                presence: *presence,
+            };
+        }
+    }
+}
+
+fn same_struct_controller(expr: &syn::Expr) -> Option<&Ident> {
+    match expr {
+        syn::Expr::Path(path) if path.path.segments.len() == 1 => {
+            Some(&path.path.segments[0].ident)
+        }
+        _ => None,
     }
 }
 

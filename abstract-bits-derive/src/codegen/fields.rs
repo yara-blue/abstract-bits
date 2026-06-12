@@ -2,6 +2,7 @@ use crate::model::Field;
 use proc_macro2::TokenStream;
 
 mod array;
+mod hidden_controller;
 mod list;
 mod normal;
 mod option;
@@ -23,6 +24,7 @@ impl Field {
                 controller,
                 ..
             } => list::read(inner_type, controller, &struct_name),
+            Field::HiddenController { field, .. } => normal::read(field, &struct_name),
             Field::Array {
                 length,
                 inner_type,
@@ -38,6 +40,11 @@ impl Field {
             Field::PaddBits(n_bits) => padding::write(*n_bits, &struct_name),
             Field::Option { inner_type, .. } => option::write(inner_type),
             Field::List { inner_type, .. } => list::write(inner_type),
+            Field::HiddenController {
+                field,
+                controlled,
+                presence,
+            } => hidden_controller::write(field, controlled, *presence),
             Field::Array { field, .. } => array::write(field),
         }
     }
@@ -48,6 +55,7 @@ impl Field {
             Field::PaddBits(n_bits) => padding::min_bits(*n_bits),
             Field::Option { inner_type, .. } => option::min_bits(inner_type),
             Field::List { inner_type, .. } => list::min_bits(inner_type),
+            Field::HiddenController { field, .. } => normal::min_bits(field),
             Field::Array {
                 inner_type, length, ..
             } => array::min_bits(inner_type, length),
@@ -64,6 +72,7 @@ impl Field {
                 max_len,
                 ..
             } => list::max_bits(inner_type, *max_len),
+            Field::HiddenController { field, .. } => normal::max_bits(field),
             Field::Array {
                 inner_type, length, ..
             } => array::max_bits(inner_type, length),
