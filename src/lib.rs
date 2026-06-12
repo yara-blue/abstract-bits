@@ -181,8 +181,8 @@ pub struct BitReader<'a> {
     Buffer is missing {bits_needed} bits"
 )]
 pub struct UnexpectedEndOfBits {
-    n_bits: usize,
-    bits_needed: usize,
+    pub n_bits: usize,
+    pub bits_needed: usize,
 }
 
 macro_rules! read_primitive {
@@ -269,8 +269,8 @@ impl core::fmt::Debug for BitWriter<'_> {
     Buffer needs to be at least {bits_needed} bits extra"
 )]
 pub struct BufferTooSmall {
-    n_bits: usize,
-    bits_needed: usize,
+    pub n_bits: usize,
+    pub bits_needed: usize,
 }
 
 macro_rules! write_primitive {

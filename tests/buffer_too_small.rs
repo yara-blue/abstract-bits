@@ -1,6 +1,6 @@
-use abstract_bits::{AbstractBits, BitWriter};
+use abstract_bits::{AbstractBits, BitWriter, BufferTooSmall, ToBytesError};
 
-// Writing past the buffer must report the bit deficit, not underflow computing it.
+// Writing past the buffer must report the bit deficit.
 
 #[test]
 fn deficit_into_empty_buffer() {
@@ -8,8 +8,16 @@ fn deficit_into_empty_buffer() {
     let mut writer = BitWriter::from(&mut buf[..]);
 
     let err = 0xABCDu16.write_abstract_bits(&mut writer).unwrap_err();
-    let cause = std::error::Error::source(&err).unwrap();
-    assert!(cause.to_string().contains("8 bits extra"));
+    assert_eq!(
+        err,
+        ToBytesError::BufferTooSmall {
+            ty: "u16",
+            cause: BufferTooSmall {
+                n_bits: 16,
+                bits_needed: 8,
+            },
+        }
+    );
 }
 
 #[test]
@@ -20,6 +28,14 @@ fn deficit_accounts_for_position() {
     0xABu8.write_abstract_bits(&mut writer).unwrap();
 
     let err = 0xCDEFu16.write_abstract_bits(&mut writer).unwrap_err();
-    let cause = std::error::Error::source(&err).unwrap();
-    assert!(cause.to_string().contains("8 bits extra"));
+    assert_eq!(
+        err,
+        ToBytesError::BufferTooSmall {
+            ty: "u16",
+            cause: BufferTooSmall {
+                n_bits: 16,
+                bits_needed: 8,
+            },
+        }
+    );
 }
