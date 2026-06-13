@@ -201,62 +201,60 @@ impl Field {
     }
 }
 
+fn extract_expr_field_base_path(field_expr: &syn::ExprField) -> Option<&syn::ExprPath> {
+    if let syn::Expr::Path(base_path) = &*field_expr.base {
+        Some(base_path)
+    } else {
+        None
+    }
+}
+
 fn max_size_from_controller_field(
     controller_expr: &syn::Expr,
     previous_fields: &[Field],
 ) -> usize {
     // Extract the base field name from the expression
-    let controller_ident = match controller_expr {
-        syn::Expr::Path(path) if path.path.segments.len() == 1 => {
-            &path.path.segments[0].ident
-        }
-        syn::Expr::Field(field_expr) => {
-            if let syn::Expr::Path(base_path) = &*field_expr.base {
-                if base_path.path.segments.len() != 1 {
-                    abort!(
-                        controller_expr.span(),
-                        "Complex controller expressions not yet supported"
-                    );
-                }
+    let base_path = match controller_expr {
+        syn::Expr::Path(path) => Some(path),
+        syn::Expr::Field(field_expr) => extract_expr_field_base_path(&field_expr),
+        _ => None,
+    }.unwrap_or_else(|| abort!(
+        controller_expr.span(),
+        "Controller expression must be a field name or field access"
+    ));
 
-                &base_path.path.segments[0].ident
-            } else {
-                abort!(
-                    controller_expr.span(),
-                    "Complex controller expressions not yet supported"
-                );
-            }
-        }
-        _ => abort!(
+    if base_path.path.segments.len() != 1 {
+        abort!(
             controller_expr.span(),
-            "Controller expression must be a field name or field access"
-        ),
-    };
+            "Complex controller expressions not yet supported"
+        );
+    }
+
+    let controller_ident = &base_path.path.segments[0].ident;
     
     // Look for the controller field in previous_fields
-    if let Some(ident) = previous_fields.iter().find_map(|f| match f {
+    let ident = previous_fields.iter().find_map(|f| match f {
         Field::Normal(nf) if nf.ident == *controller_ident => Some(nf),
         _ => None,
-    }) {
-        if let Some(bits) = ident.bits {
+    }).unwrap_or_else(|| abort!(
+        controller_ident.span(),
+        "Controller field '{}' not found",
+        controller_ident
+    ));
+
+    // Compute the size
+    if let Some(bits) = ident.bits {
+        2usize.pow(bits as u32)
+    } else {
+        if let Ok(bits) = padding_from_type(&ident.out_ty) {
             2usize.pow(bits as u32)
         } else {
-            if let Ok(bits) = padding_from_type(&ident.out_ty) {
-                2usize.pow(bits as u32)
-            } else {
-                abort!(
-                    controller_ident.span(),
-                    "Controller field '{}' must be a numeric type with known bit size",
-                    controller_ident
-                );
-            }
+            abort!(
+                controller_ident.span(),
+                "Controller field '{}' must be a numeric type with known bit size",
+                controller_ident
+            );
         }
-    } else {
-        abort!(
-            controller_ident.span(),
-            "Controller field '{}' not found",
-            controller_ident
-        );
     }
 }
 
