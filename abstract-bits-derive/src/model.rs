@@ -348,8 +348,8 @@ fn presence_from_attr(field: &syn::Field) -> Option<syn::Expr> {
     match parse(attr)? {
         Ok(expr) => Some(expr),
         Err(_) => abort!(attr.span(), "invalid abstract_bits attribute"; 
-            help = "The syntax is: #[abstract_bits(presence_from = <expr>)] with expr \
-            a field expression controlling this option's presence"),
+            help = "The syntax is: #[abstract_bits(presence_from = <expr>)] where the \
+            boolean expr controls this option's presence"),
     }
 }
 
