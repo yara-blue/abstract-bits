@@ -218,10 +218,13 @@ fn max_size_from_controller_field(
         syn::Expr::Path(path) => Some(path),
         syn::Expr::Field(field_expr) => extract_expr_field_base_path(&field_expr),
         _ => None,
-    }.unwrap_or_else(|| abort!(
-        controller_expr.span(),
-        "Controller expression must be a field name or field access"
-    ));
+    }
+    .unwrap_or_else(|| {
+        abort!(
+            controller_expr.span(),
+            "Controller expression must be a field name or field access"
+        )
+    });
 
     if base_path.path.segments.len() != 1 {
         abort!(
@@ -231,16 +234,21 @@ fn max_size_from_controller_field(
     }
 
     let controller_ident = &base_path.path.segments[0].ident;
-    
+
     // Look for the controller field in previous_fields
-    let ident = previous_fields.iter().find_map(|f| match f {
-        Field::Normal(nf) if nf.ident == *controller_ident => Some(nf),
-        _ => None,
-    }).unwrap_or_else(|| abort!(
-        controller_ident.span(),
-        "Controller field '{}' not found",
-        controller_ident
-    ));
+    let ident = previous_fields
+        .iter()
+        .find_map(|f| match f {
+            Field::Normal(nf) if nf.ident == *controller_ident => Some(nf),
+            _ => None,
+        })
+        .unwrap_or_else(|| {
+            abort!(
+                controller_ident.span(),
+                "Controller field '{}' not found",
+                controller_ident
+            )
+        });
 
     // Compute the size
     if let Some(bits) = ident.bits {
@@ -303,7 +311,7 @@ fn length_from_attr(field: &syn::Field) -> Option<syn::Expr> {
             Some(TokenTree::Punct(punct)) if punct.as_char() == '=' => (),
             _ => return Some(Err(())),
         }
-        
+
         // Parse remaining tokens as expression
         Some(syn::parse2::<syn::Expr>(tokens.collect()).map_err(|_| ()))
     }
@@ -335,7 +343,7 @@ fn presence_from_attr(field: &syn::Field) -> Option<syn::Expr> {
             Some(TokenTree::Punct(punct)) if punct.as_char() == '=' => (),
             _ => return Some(Err(())),
         }
-        
+
         // Parse remaining tokens as expression
         Some(syn::parse2::<syn::Expr>(tokens.collect()).map_err(|_| ()))
     }
@@ -467,8 +475,9 @@ fn hide_same_struct_controllers(fields: &mut [Field]) {
         let Field::Normal(normal) = field else {
             continue;
         };
-        if let Some((_, controlled, presence)) =
-            controllers.iter().find(|(ident, ..)| *ident == normal.ident)
+        if let Some((_, controlled, presence)) = controllers
+            .iter()
+            .find(|(ident, ..)| *ident == normal.ident)
         {
             *field = Field::HiddenController {
                 field: normal.clone(),

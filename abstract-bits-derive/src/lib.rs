@@ -15,7 +15,7 @@ mod errors;
 ///
 /// ```
 /// use abstract_bits::abstract_bits;
-/// 
+///
 /// #[derive(Debug, Eq, PartialEq, TryFromPrimitive, Clone, Copy)]
 /// #[abstract_bits(bits=2)]
 /// #[repr(u8)]

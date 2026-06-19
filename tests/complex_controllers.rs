@@ -12,14 +12,22 @@ struct Inverted {
 
 #[test]
 fn inverted_presence_present() {
-    let value = Inverted { flag: false, opt: Some(0x1234), trailing: 0x5A };
+    let value = Inverted {
+        flag: false,
+        opt: Some(0x1234),
+        trailing: 0x5A,
+    };
     let bytes = value.to_abstract_bits().unwrap();
     assert_eq!(Inverted::from_abstract_bits(&bytes).unwrap(), value);
 }
 
 #[test]
 fn inverted_presence_absent() {
-    let value = Inverted { flag: true, opt: None, trailing: 0x5A };
+    let value = Inverted {
+        flag: true,
+        opt: None,
+        trailing: 0x5A,
+    };
     let bytes = value.to_abstract_bits().unwrap();
     assert_eq!(Inverted::from_abstract_bits(&bytes).unwrap(), value);
 }
@@ -40,14 +48,22 @@ struct SharedPresence {
 
 #[test]
 fn shared_presence_present() {
-    let value = SharedPresence { a: Some(0x11), b: Some(0x2222), trailing: 0x5A };
+    let value = SharedPresence {
+        a: Some(0x11),
+        b: Some(0x2222),
+        trailing: 0x5A,
+    };
     let bytes = value.to_abstract_bits().unwrap();
     assert_eq!(SharedPresence::from_abstract_bits(&bytes).unwrap(), value);
 }
 
 #[test]
 fn shared_presence_absent() {
-    let value = SharedPresence { a: None, b: None, trailing: 0x5A };
+    let value = SharedPresence {
+        a: None,
+        b: None,
+        trailing: 0x5A,
+    };
     let bytes = value.to_abstract_bits().unwrap();
     assert_eq!(SharedPresence::from_abstract_bits(&bytes).unwrap(), value);
 }
