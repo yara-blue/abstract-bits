@@ -266,6 +266,12 @@ impl BitReader<'_> {
     read_primitive! {read_u64, u64}
 }
 
+impl BitReader<'_> {
+    pub fn remaining_bits(&self) -> usize {
+        self.buf.len() - self.pos
+    }
+}
+
 impl<'a> From<&'a [u8]> for BitReader<'a> {
     fn from(bytes: &'a [u8]) -> Self {
         Self {

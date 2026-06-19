@@ -7,6 +7,7 @@ mod list;
 mod normal;
 mod option;
 mod padding;
+mod rest_list;
 
 impl Field {
     pub fn read_code(&self, struct_ident: &syn::Ident) -> TokenStream {
@@ -24,6 +25,9 @@ impl Field {
                 controller,
                 ..
             } => list::read(inner_type, controller, &struct_name),
+            Field::RestList { inner_type, .. } => {
+                rest_list::read(inner_type, &struct_name)
+            }
             Field::HiddenController { field, .. } => normal::read(field, &struct_name),
             Field::Array {
                 length,
@@ -40,6 +44,7 @@ impl Field {
             Field::PaddBits(n_bits) => padding::write(*n_bits, &struct_name),
             Field::Option { inner_type, .. } => option::write(inner_type),
             Field::List { inner_type, .. } => list::write(inner_type),
+            Field::RestList { inner_type, .. } => rest_list::write(inner_type),
             Field::HiddenController {
                 field,
                 controlled,
@@ -55,6 +60,7 @@ impl Field {
             Field::PaddBits(n_bits) => padding::min_bits(*n_bits),
             Field::Option { inner_type, .. } => option::min_bits(inner_type),
             Field::List { inner_type, .. } => list::min_bits(inner_type),
+            Field::RestList { .. } => rest_list::min_bits(),
             Field::HiddenController { field, .. } => normal::min_bits(field),
             Field::Array {
                 inner_type, length, ..
@@ -72,6 +78,7 @@ impl Field {
                 max_len,
                 ..
             } => list::max_bits(inner_type, *max_len),
+            Field::RestList { max_bytes, .. } => rest_list::max_bits(*max_bytes),
             Field::HiddenController { field, .. } => normal::max_bits(field),
             Field::Array {
                 inner_type, length, ..
