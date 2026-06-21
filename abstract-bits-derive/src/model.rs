@@ -209,6 +209,16 @@ fn extract_expr_field_base_path(field_expr: &syn::ExprField) -> Option<&syn::Exp
     }
 }
 
+fn controller_in_previous_fields<'a>(
+    previous_fields: &'a [Field],
+    controller_ident: &Ident,
+) -> Option<&'a NormalField> {
+    previous_fields.iter().find_map(|f| match f {
+        Field::Normal(nf) if nf.ident == *controller_ident => Some(nf),
+        _ => None,
+    })
+}
+
 fn max_size_from_controller_field(
     controller_expr: &syn::Expr,
     previous_fields: &[Field],
@@ -233,12 +243,7 @@ fn max_size_from_controller_field(
     let controller_ident = &base_path.path.segments[0].ident;
 
     // Look for the controller field in previous_fields
-    let ident = previous_fields
-        .iter()
-        .find_map(|f| match f {
-            Field::Normal(nf) if nf.ident == *controller_ident => Some(nf),
-            _ => None,
-        })
+    let ident = controller_in_previous_fields(previous_fields, controller_ident)
         .unwrap_or_else(|| {
             abort!(
                 controller_ident.span(),
