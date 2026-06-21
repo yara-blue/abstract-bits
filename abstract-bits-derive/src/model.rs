@@ -216,15 +216,12 @@ fn max_size_from_controller_field(
     // Extract the base field name from the expression
     let base_path = match controller_expr {
         syn::Expr::Path(path) => Some(path),
-        syn::Expr::Field(field_expr) => extract_expr_field_base_path(&field_expr),
-        _ => None,
-    }
-    .unwrap_or_else(|| {
-        abort!(
+        syn::Expr::Field(field_expr) => if let syn::Expr::Path(path) = &*expr.base => path,
+        _ => abort!(
             controller_expr.span(),
             "Controller expression must be a field name or field access"
-        )
-    });
+        ),
+    };
 
     if base_path.path.segments.len() != 1 {
         abort!(
@@ -450,6 +447,9 @@ impl Model {
     }
 }
 
+// A controller field on the same struct is turned into a `HiddenController` to allow its
+// value to be set automatically based on the presence of the controlled field. Otherwise,
+// the state of both fields needs to be manually aligned.
 fn hide_same_struct_controllers(fields: &mut [Field]) {
     let mut controllers: Vec<(Ident, Ident, bool)> = Vec::new();
     for field in fields.iter() {
