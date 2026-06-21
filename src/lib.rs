@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 pub use abstract_bits_derive::abstract_bits;
-pub use arbitrary_int::{u1, u2, u3, u4, u5, u6, u7};
+pub use arbitrary_int::*;
 pub use bitvec;
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
