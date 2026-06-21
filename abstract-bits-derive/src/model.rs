@@ -225,8 +225,8 @@ fn max_size_from_controller_field(
 ) -> usize {
     // Extract the base field name from the expression
     let base_path = match controller_expr {
-        syn::Expr::Path(path) => Some(path),
-        syn::Expr::Field(field_expr) => if let syn::Expr::Path(path) = &*expr.base => path,
+        syn::Expr::Path(path) => path,
+        syn::Expr::Field(expr) if let syn::Expr::Path(path) = &*expr.base => path,
         _ => abort!(
             controller_expr.span(),
             "Controller expression must be a field name or field access"
