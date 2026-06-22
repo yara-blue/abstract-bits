@@ -68,6 +68,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - For each `Vec` field add `#[abstract_bits(length_from = <controller_field>)]`
   above the field, where `<controller_field>` is a numeric field that controls
   the length of the `Vec`.
+- For a `Vec` field that should be read until the input (or the enclosing TLV
+  value) is exhausted rather than from a length prefix, use
+  `#[abstract_bits(rest, max_bytes = <N>)]`. `<N>` bounds the serialized size in
+  bytes, which such an otherwise-unbounded field needs.
 
 ## With an enum
 - Add `#[abstract-bits(bits = <N>)]` above your enum. Replace `N` with the
@@ -94,16 +98,18 @@ struct Frame {
     source: Option<u16>,
     #[abstract_bits(length_from = data_len)]
     data: Vec<Message>,
+    #[abstract_bits(rest, max_bytes = 64)]
+    trailing_data: Vec<u8>,
 }
 
-/// This is: 4+3+1+10 = 18 bits long
+/// This is: 4+3+1+12 = 20 bits long
 #[abstract_bits]
 #[derive(Debug, PartialEq, Eq)]
 struct Message {
     header: u4,
     reserved: u3,
     is_important: bool,
-    bits: [bool; 10]
+    bits: [bool; 12]
 }
 
 #[abstract_bits(bits = 2)]
@@ -121,11 +127,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         header: 12,
         frame_type: Type::default(),
         source: Some(4243),
-        data: vec![Message {
-            header: 9,
-            is_important: false,
-            bits: [true, false, true, true, true, false, true, true, false, true]
-        }],
+        data: vec![
+            Message {
+                header: 9,
+                is_important: false,
+                bits: [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1].map(|b| b == 1)
+            },
+            Message {
+                header: 6,
+                is_important: false,
+                bits: [0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0].map(|b| b == 1)
+            },
+        ],
+        trailing_data: vec![1, 2, 3, 4, 5],
     }.to_abstract_bytes()?;
     let mut reader = BitReader::from(bytes.as_slice());
     let mut frame = Frame::read_abstract_bits(&mut reader)?;
