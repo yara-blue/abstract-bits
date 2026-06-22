@@ -20,7 +20,7 @@ pub(crate) fn read(inner_type: &NormalField, struct_name: &Literal) -> TokenStre
     let inner_ty = generics_to_fully_qualified(inner_type.out_ty.clone());
     quote_spanned! {inner_ty.span()=>
         let mut #field_ident = ::std::vec::Vec::new();
-        while reader.remaining_bits() > 0 {
+        while reader.remaining_bits() > 0 && reader.bits_read() < Self::MAX_BITS {
             let element =
                 <#inner_ty as ::abstract_bits::AbstractBits>::read_abstract_bits(reader)
                     .map_err(|cause| cause.read_field(#struct_name, #field_name))?;
