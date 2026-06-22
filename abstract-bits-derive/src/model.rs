@@ -201,9 +201,17 @@ impl Field {
                         ident
                     )
                 });
+                let inner_type = NormalField::from(vec_stripped);
+                let mut full_type = NormalField::from(field);
+                if inner_type.bits.is_some() {
+                    let inner_out_ty = &inner_type.out_ty;
+                    full_type.out_ty = parse_quote_spanned!(
+                        inner_out_ty.span()=> Vec<#inner_out_ty>
+                    );
+                }
                 Self::RestList {
-                    inner_type: NormalField::from(vec_stripped),
-                    full_type: NormalField::from(field),
+                    inner_type,
+                    full_type,
                     max_bytes,
                 }
             } else {
