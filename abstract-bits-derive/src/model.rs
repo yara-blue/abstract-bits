@@ -201,14 +201,6 @@ impl Field {
     }
 }
 
-fn extract_expr_field_base_path(field_expr: &syn::ExprField) -> Option<&syn::ExprPath> {
-    if let syn::Expr::Path(base_path) = &*field_expr.base {
-        Some(base_path)
-    } else {
-        None
-    }
-}
-
 fn controller_in_previous_fields<'a>(
     previous_fields: &'a [Field],
     controller_ident: &Ident,
