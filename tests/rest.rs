@@ -72,7 +72,6 @@ fn rest_max_length() {
     );
 }
 
-
 #[abstract_bits]
 #[derive(Debug, PartialEq)]
 struct UnalignedFrame {
