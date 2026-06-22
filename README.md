@@ -26,11 +26,11 @@ use abstract_bits::{abstract_bits, AbstractBits};
 
 #[abstract_bits]
 struct LinkStatusCommand {
-    #[abstract_bits(length_of = link_statuses)]
-    reserved: u5,
+    link_statuses_len: u5,
     is_first_frame: bool,
     is_last_frame: bool,
     reserved: u1,
+    #[abstract_bits(length_from = link_statuses_len)]
     link_statuses: Vec<LinkStatus>,
 }
 
@@ -62,11 +62,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   transformed struct these will transform to the smallest rust primitives that
   can represent them. For example an `u7` will become an `u8`.
 - Add padding (if needed) in between fields using `reserved = u<n>`.
-- For each `Option` field place `#[abstract-bits(presence_of = <field_name>)]`
-  above the `reserved: bool` fields which controls whether the `Option` is
-  `Some` or `None`.
-- For each `Vec` field place `#[abstract-bits(length_of = <field_name>)]`
-  above the `reserved: u<n>` fields which controls the length of the `Vec`.
+- For each `Option` field add `#[abstract_bits(presence_from = <controller_field>)]`
+  above the field, where `<controller_field>` is a `bool` field that controls
+  whether the `Option` is `Some` or `None`.
+- For each `Vec` field add `#[abstract_bits(length_from = <controller_field>)]`
+  above the field, where `<controller_field>` is a numeric field that controls
+  the length of the `Vec`.
 
 ## With an enum
 - Add `#[abstract-bits(bits = <N>)]` above your enum. Replace `N` with the
@@ -86,12 +87,12 @@ use abstract_bits::{abstract_bits, AbstractBits, BitReader};
 #[derive(Debug, PartialEq, Eq)] // note: derives follow after
 struct Frame {
     header: u4,
-    #[abstract_bits(presence_of = source)]
-    reserved: bool,
-    #[abstract_bits(length_of = data)]
-    reserved: u5,
+    has_source: bool,
+    data_len: u5,
     frame_type: Type,
+    #[abstract_bits(presence_from = has_source)]
     source: Option<u16>,
+    #[abstract_bits(length_from = data_len)]
     data: Vec<Message>,
 }
 
@@ -102,7 +103,7 @@ struct Message {
     header: u4,
     reserved: u3,
     is_important: bool,
-    bits: [bool; 4]
+    bits: [bool; 10]
 }
 
 #[abstract_bits(bits = 2)]
@@ -123,7 +124,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data: vec![Message {
             header: 9,
             is_important: false,
-            bits: [true, false, true, true]
+            bits: [true, false, true, true, true, false, true, true, false, true]
         }],
     }.to_abstract_bits()?;
     let mut reader = BitReader::from(bytes.as_slice());

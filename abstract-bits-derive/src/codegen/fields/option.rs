@@ -1,14 +1,10 @@
 use proc_macro2::{Literal, TokenStream};
-use quote::{format_ident, quote_spanned};
-use syn::Ident;
+use quote::quote_spanned;
+use syn::Expr;
 use syn::spanned::Spanned;
 
 use crate::codegen::generics_to_fully_qualified;
 use crate::model::NormalField;
-
-pub fn is_some_ident(controlled: &Ident) -> Ident {
-    format_ident!("{controlled}_is_some")
-}
 
 pub fn read_field_code(
     NormalField {
@@ -37,12 +33,16 @@ pub fn read_field_code(
     }
 }
 
-pub fn read(field: &NormalField, struct_name: &Literal) -> TokenStream {
-    let is_some_ident = is_some_ident(&field.ident);
+pub fn read(
+    field: &NormalField,
+    controller: &Expr,
+    struct_name: &Literal,
+) -> TokenStream {
     let field_ident = &field.ident;
     let field_read_code = read_field_code(field, struct_name);
+
     quote_spanned! {field.ident.span()=>
-        let #field_ident = if #is_some_ident {
+        let #field_ident = if #controller {
             #field_read_code
             Some(#field_ident)
         } else {

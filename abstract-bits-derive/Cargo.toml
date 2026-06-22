@@ -13,8 +13,11 @@ authors = ["David Kleingeld"]
 [dependencies]
 syn = { version = "2", features = ["full", "extra-traits"] }
 quote = "1"
-proc-macro2 = "1" 
+proc-macro2 = "1"
 proc-macro-error2 = "2"
+
+[dev-dependencies]
+abstract-bits = { path = "../" }
 
 [lib]
 proc-macro = true

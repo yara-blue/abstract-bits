@@ -3,12 +3,12 @@ use abstract_bits::abstract_bits;
 #[abstract_bits]
 struct Frame {
     header: u4,
-    #[abstract_bits(presence_of = source)]
-    reserved: bool,
-    #[abstract_bits(length_of = data)]
-    reserved: u5,
+    has_source: bool,
+    data_len: u5,
     ty: Type,
+    #[abstract_bits(presence_from = has_source)]
     source: Option<u16>,
+    #[abstract_bits(length_from = data_len)]
     data: Vec<Message>,
 }
 

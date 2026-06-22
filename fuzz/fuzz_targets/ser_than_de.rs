@@ -9,13 +9,13 @@ use abstract_bits::{abstract_bits, AbstractBits};
 struct Frame {
     #[arbitrary(with = |u: &mut Unstructured| u.int_in_range(0..=15))]
     header: u4,
-    #[abstract_bits(presence_of = source)]
-    reserved: bool,
-    #[abstract_bits(length_of = data)]
+    has_source: bool,
     data_len: u5,
     ty: Type,
+    #[abstract_bits(presence_from = has_source)]
     source: Option<u16>,
     #[arbitrary(with = arbitrary_vec)]
+    #[abstract_bits(length_from = data_len)]
     data: Vec<Message>,
 }
 

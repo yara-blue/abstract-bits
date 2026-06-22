@@ -7,13 +7,15 @@ use codegen::codegen;
 mod errors;
 
 /// # Warning
-/// - When applied to an enum (which does not contain values) 
+/// - When applied to an enum (which does not contain values)
 /// that enum must be Copy.
 /// - Any derives should be applied **after** the `abstract_bits` macro.
 ///
 /// # Example:
 ///
 /// ```
+/// use abstract_bits::abstract_bits;
+///
 /// #[derive(Debug, Eq, PartialEq, TryFromPrimitive, Clone, Copy)]
 /// #[abstract_bits(bits=2)]
 /// #[repr(u8)]
@@ -29,12 +31,12 @@ mod errors;
 /// pub struct NwkRouteRequestCommand {
 ///     reserved: u3,
 ///     pub many_to_one: NwkRouteRequestManyToOne,
-///     #[abstract_bits(presence_of = destination_eui64)]
-///     reserved: bool,
+///     has_destination_eui64: bool,
 ///     reserved: u2,
 ///     pub route_request_identifier: u8,
 ///     pub destination_address: Nwk,
 ///     pub path_cost: u8,
+///     #[abstract_bits(presence_from = has_destination_eui64)]
 ///     pub destination_eui64: Option<Eui64>,
 ///     pub tlvs: Vec<u8>,
 /// }

@@ -176,10 +176,6 @@ impl ToTokens for super::model::EmptyVariant {
     }
 }
 
-pub fn list_len_ident(controlled: &Ident) -> Ident {
-    quote::format_ident!("{controlled}_len")
-}
-
 pub fn is_primitive(bits: usize) -> Option<TokenStream> {
     match bits {
         8 => Some(quote! {u8}),

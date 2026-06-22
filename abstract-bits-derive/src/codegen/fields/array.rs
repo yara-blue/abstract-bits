@@ -12,7 +12,12 @@ pub(crate) fn read(
     struct_name: &Literal,
 ) -> TokenStream {
     let field_ident = &field.ident;
-    let field_name = Literal::string(&field_ident.as_ref().map(|i| i.to_string()).unwrap_or_default());
+    let field_name = Literal::string(
+        &field_ident
+            .as_ref()
+            .map(|i| i.to_string())
+            .unwrap_or_default(),
+    );
 
     quote_spanned! {field.ident.span()=>
         const LEN: usize = #length;
