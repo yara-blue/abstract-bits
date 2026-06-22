@@ -204,11 +204,20 @@ impl Field {
 fn controller_in_previous_fields<'a>(
     previous_fields: &'a [Field],
     controller_ident: &Ident,
-) -> Option<&'a NormalField> {
-    previous_fields.iter().find_map(|f| match f {
-        Field::Normal(nf) if nf.ident == *controller_ident => Some(nf),
-        _ => None,
-    })
+) -> &'a NormalField {
+    previous_fields
+        .iter()
+        .find_map(|f| match f {
+            Field::Normal(nf) if nf.ident == *controller_ident => Some(nf),
+            _ => None,
+        })
+        .unwrap_or_else(|| {
+            abort!(
+                controller_ident.span(),
+                "Controller field '{}' not found",
+                controller_ident
+            )
+        })
 }
 
 fn max_size_from_controller_field(
@@ -235,14 +244,7 @@ fn max_size_from_controller_field(
     let controller_ident = &base_path.path.segments[0].ident;
 
     // Look for the controller field in previous_fields
-    let ident = controller_in_previous_fields(previous_fields, controller_ident)
-        .unwrap_or_else(|| {
-            abort!(
-                controller_ident.span(),
-                "Controller field '{}' not found",
-                controller_ident
-            )
-        });
+    let ident = controller_in_previous_fields(previous_fields, controller_ident);
 
     // Compute the size
     if let Some(bits) = ident.bits {
