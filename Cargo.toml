@@ -14,7 +14,7 @@ authors = ["David Kleingeld"]
 
 [dependencies]
 arbitrary-int = "1.3.0"
-bitvec = { version = "1.0.1", default-features = false, features = ["alloc"] }
+bitvec = { version = "1.0.1", default-features = false }
 thiserror = { version = "2.0.12", default-features = false }
 abstract-bits-derive = { path = "abstract-bits-derive", version = "0.2.0" }
 
