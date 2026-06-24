@@ -68,6 +68,6 @@ fn arbitrary_int_packing() {
         ]
     );
 
-    let parsed = StrangeInts::from_abstract_bits(&bytes).unwrap();
+    let parsed = UnalignedPack::from_abstract_bits(&bytes).unwrap();
     assert_eq!(parsed, s);
 }
