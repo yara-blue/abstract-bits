@@ -140,7 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 # Planned features
-- `no-std` & `no-alloc` support (quite trivial)
+- `no-alloc` support
 - Support algebraic data-types other than Option (already supported)
 
 # Possible features

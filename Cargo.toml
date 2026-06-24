@@ -6,7 +6,7 @@ rust-version = "1.86"
 
 readme = "README.md"
 description = "Turn any combination of bit and byte fields into a structs"
-categories = ["data-structures", "no-std::no-alloc", "embedded", "rust-patterns"]
+categories = ["data-structures", "no-std", "embedded", "rust-patterns"]
 repository = "https://github.com/dvdsk/abstract-bits"
 
 license = "Apache-2.0 OR MIT"
