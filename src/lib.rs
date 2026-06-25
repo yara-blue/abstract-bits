@@ -26,7 +26,7 @@ pub trait AbstractBits {
     where
         Self: Sized;
 
-    fn to_abstract_bits(&self) -> Result<Vec<u8>, ToBytesError> {
+    fn to_abstract_bytes(&self) -> Result<Vec<u8>, ToBytesError> {
         let needed_bytes = Self::MAX_BITS.div_ceil(8);
         let mut buffer = alloc::vec![0u8; needed_bytes];
         let mut writer = BitWriter::from(buffer.as_mut_slice());
@@ -36,7 +36,7 @@ pub trait AbstractBits {
         Ok(buffer)
     }
 
-    fn from_abstract_bits(bytes: &[u8]) -> Result<Self, FromBytesError>
+    fn from_abstract_bytes(bytes: &[u8]) -> Result<Self, FromBytesError>
     where
         Self: Sized,
     {

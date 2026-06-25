@@ -35,7 +35,7 @@ fn enum_variant_gates_presence() {
             trailing: 34,
         },
     ] {
-        let bytes = frame.to_abstract_bits().unwrap();
-        assert_eq!(Frame::from_abstract_bits(&bytes).unwrap(), frame);
+        let bytes = frame.to_abstract_bytes().unwrap();
+        assert_eq!(Frame::from_abstract_bytes(&bytes).unwrap(), frame);
     }
 }

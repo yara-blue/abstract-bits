@@ -17,8 +17,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         is_last_frame: true,
         link_statuses: Vec::new(),
     }
-    .to_abstract_bits()?;
-    let link_status_cmd = LinkStatusCommand::from_abstract_bits(&bytes)?;
+    .to_abstract_bytes()?;
+    let link_status_cmd = LinkStatusCommand::from_abstract_bytes(&bytes)?;
     assert_eq!(link_status_cmd.link_statuses.len(), 0);
     print!("number of links: {}", link_status_cmd.link_statuses.len());
     Ok(())

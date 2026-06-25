@@ -37,8 +37,8 @@ enum Type {
 fn test_test_case() {
     color_eyre::install().unwrap();
 
-    let serialized = test_input().to_abstract_bits().unwrap();
-    let deserialized = Frame::from_abstract_bits(&serialized).unwrap();
+    let serialized = test_input().to_abstract_bytes().unwrap();
+    let deserialized = Frame::from_abstract_bytes(&serialized).unwrap();
     assert_eq!(test_input(), deserialized)
 }
 

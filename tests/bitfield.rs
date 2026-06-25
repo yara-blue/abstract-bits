@@ -46,7 +46,7 @@ fn arbitrary_int_packing() {
         field_d: 0b10001000_1,
     };
 
-    let bytes = s.to_abstract_bits().unwrap();
+    let bytes = s.to_abstract_bytes().unwrap();
     assert_eq!(
         bytes,
         vec![
@@ -68,6 +68,6 @@ fn arbitrary_int_packing() {
         ]
     );
 
-    let parsed = UnalignedPack::from_abstract_bits(&bytes).unwrap();
+    let parsed = UnalignedPack::from_abstract_bytes(&bytes).unwrap();
     assert_eq!(parsed, s);
 }

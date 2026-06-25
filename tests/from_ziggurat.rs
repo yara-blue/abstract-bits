@@ -54,7 +54,7 @@ fn test_nwk_route_reply_command() {
 
     dbg!(NwkRouteReplyCommand::MAX_BITS);
     dbg!(bytes.len());
-    let command = NwkRouteReplyCommand::from_abstract_bits(&bytes).unwrap();
+    let command = NwkRouteReplyCommand::from_abstract_bytes(&bytes).unwrap();
 
     assert_eq!(
         command,
@@ -68,7 +68,7 @@ fn test_nwk_route_reply_command() {
         }
     );
 
-    assert_eq!(command.to_abstract_bits().unwrap(), &bytes);
+    assert_eq!(command.to_abstract_bytes().unwrap(), &bytes);
 }
 
 /// Zigbee spec compressed: 3.4.8.3
@@ -98,7 +98,7 @@ pub struct NwkLinkStatus {
 fn test_nwk_link_status_command() {
     use hex_literal::hex;
     let bytes = hex!("0862e73c120ac711").to_vec();
-    let command = NwkLinkStatusCommand::from_abstract_bits(&bytes[1..]).unwrap();
+    let command = NwkLinkStatusCommand::from_abstract_bytes(&bytes[1..]).unwrap();
 
     assert_eq!(
         command,
@@ -120,7 +120,7 @@ fn test_nwk_link_status_command() {
         }
     );
 
-    assert_eq!(&command.to_abstract_bits().unwrap(), &bytes[1..]);
+    assert_eq!(&command.to_abstract_bytes().unwrap(), &bytes[1..]);
 }
 
 #[abstract_bits(bits = 2)]
@@ -189,7 +189,7 @@ pub struct NwkHeader {
 fn test_nested_nwk_header() {
     use hex_literal::hex;
     let bytes = hex!("0806e73c375f1dcc010039f9").to_vec();
-    let header = NwkHeader::from_abstract_bits(&bytes).unwrap();
+    let header = NwkHeader::from_abstract_bytes(&bytes).unwrap();
 
     assert_eq!(
         header,
@@ -219,5 +219,5 @@ fn test_nested_nwk_header() {
         }
     );
 
-    assert_eq!(&header.to_abstract_bits().unwrap(), &bytes);
+    assert_eq!(&header.to_abstract_bytes().unwrap(), &bytes);
 }

@@ -17,8 +17,8 @@ fn inverted_presence_present() {
         opt: Some(0x1234),
         trailing: 0x5A,
     };
-    let bytes = value.to_abstract_bits().unwrap();
-    assert_eq!(Inverted::from_abstract_bits(&bytes).unwrap(), value);
+    let bytes = value.to_abstract_bytes().unwrap();
+    assert_eq!(Inverted::from_abstract_bytes(&bytes).unwrap(), value);
 }
 
 #[test]
@@ -28,8 +28,8 @@ fn inverted_presence_absent() {
         opt: None,
         trailing: 0x5A,
     };
-    let bytes = value.to_abstract_bits().unwrap();
-    assert_eq!(Inverted::from_abstract_bits(&bytes).unwrap(), value);
+    let bytes = value.to_abstract_bytes().unwrap();
+    assert_eq!(Inverted::from_abstract_bytes(&bytes).unwrap(), value);
 }
 
 // One controller driving several options. `present` is a bare same-struct field, so it
@@ -53,8 +53,8 @@ fn shared_presence_present() {
         b: Some(0x2222),
         trailing: 0x5A,
     };
-    let bytes = value.to_abstract_bits().unwrap();
-    assert_eq!(SharedPresence::from_abstract_bits(&bytes).unwrap(), value);
+    let bytes = value.to_abstract_bytes().unwrap();
+    assert_eq!(SharedPresence::from_abstract_bytes(&bytes).unwrap(), value);
 }
 
 #[test]
@@ -64,6 +64,6 @@ fn shared_presence_absent() {
         b: None,
         trailing: 0x5A,
     };
-    let bytes = value.to_abstract_bits().unwrap();
-    assert_eq!(SharedPresence::from_abstract_bits(&bytes).unwrap(), value);
+    let bytes = value.to_abstract_bytes().unwrap();
+    assert_eq!(SharedPresence::from_abstract_bytes(&bytes).unwrap(), value);
 }
