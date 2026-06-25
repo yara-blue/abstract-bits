@@ -10,6 +10,7 @@ pub use arbitrary_int::*;
 pub use bitvec;
 use bitvec::order::Lsb0;
 use bitvec::slice::BitSlice;
+use bitvec::vec::BitVec;
 
 mod error;
 pub use error::{FromBytesError, ReadErrorCause, ToBytesError};
@@ -26,22 +27,41 @@ pub trait AbstractBits {
     where
         Self: Sized;
 
-    fn to_abstract_bits(&self) -> Result<Vec<u8>, ToBytesError> {
+    /// Serialize to an exactly-sized bit buffer. Lossless for every type,
+    /// including those whose length is not a multiple of 8 bits. Use
+    /// [`to_abstract_bytes`](AbstractBits::to_abstract_bytes) for byte output.
+    fn to_abstract_bits(&self) -> Result<BitVec<u8, Lsb0>, ToBytesError> {
         let needed_bytes = Self::MAX_BITS.div_ceil(8);
         let mut buffer = alloc::vec![0u8; needed_bytes];
         let mut writer = BitWriter::from(buffer.as_mut_slice());
         self.write_abstract_bits(&mut writer)?;
-        let bytes = writer.bytes_written();
-        buffer.truncate(bytes);
+        let bits = writer.bits_written();
+        let mut buffer = BitVec::<u8, Lsb0>::from_vec(buffer);
+        buffer.truncate(bits);
         Ok(buffer)
     }
 
-    fn from_abstract_bits(bytes: &[u8]) -> Result<Self, FromBytesError>
+    /// Deserialize from a bit buffer as produced by
+    /// [`to_abstract_bits`](AbstractBits::to_abstract_bits).
+    fn from_abstract_bits(bits: &BitSlice<u8, Lsb0>) -> Result<Self, FromBytesError>
     where
         Self: Sized,
     {
-        let mut reader = BitReader::from(bytes);
+        let mut reader = BitReader::from(bits);
         Self::read_abstract_bits(&mut reader)
+    }
+
+    /// Serialize to bytes, zero-padding the final byte up to a whole byte if needed.
+    fn to_abstract_bytes(&self) -> Result<Vec<u8>, ToBytesError> {
+        Ok(self.to_abstract_bits()?.into_vec())
+    }
+
+    /// Deserialize from a byte slice.
+    fn from_abstract_bytes(bytes: &[u8]) -> Result<Self, FromBytesError>
+    where
+        Self: Sized,
+    {
+        Self::from_abstract_bits(BitSlice::from_slice(bytes))
     }
 }
 
@@ -252,6 +272,12 @@ impl<'a> From<&'a [u8]> for BitReader<'a> {
             pos: 0,
             buf: BitSlice::from_slice(bytes),
         }
+    }
+}
+
+impl<'a> From<&'a BitSlice<u8, Lsb0>> for BitReader<'a> {
+    fn from(buf: &'a BitSlice<u8, Lsb0>) -> Self {
+        Self { pos: 0, buf }
     }
 }
 

@@ -48,8 +48,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         is_first_frame: false,
         is_last_frame: true,
         link_statuses: Vec::new(),
-    }.to_abstract_bits()?;
-    let link_status_cmd = LinkStatusCommand::from_abstract_bits(&bytes)?;
+    }.to_abstract_bytes()?;
+    let link_status_cmd = LinkStatusCommand::from_abstract_bytes(&bytes)?;
     print!("number of links: {}", link_status_cmd.link_statuses.len());
     Ok(())
 }
@@ -126,7 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             is_important: false,
             bits: [true, false, true, true, true, false, true, true, false, true]
         }],
-    }.to_abstract_bits()?;
+    }.to_abstract_bytes()?;
     let mut reader = BitReader::from(bytes.as_slice());
     let mut frame = Frame::read_abstract_bits(&mut reader)?;
     if frame.frame_type == Type::default() {
@@ -134,7 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             message.is_important = true;
         }
     }
-    let bytes = frame.to_abstract_bits();
+    let bytes = frame.to_abstract_bytes();
     Ok(())
 }
 ```
