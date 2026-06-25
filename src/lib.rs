@@ -1,4 +1,9 @@
 #![doc = include_str!("../README.md")]
+#![no_std]
+
+extern crate alloc;
+
+use alloc::vec::Vec;
 
 pub use abstract_bits_derive::abstract_bits;
 pub use arbitrary_int::*;
@@ -23,7 +28,7 @@ pub trait AbstractBits {
 
     fn to_abstract_bits(&self) -> Result<Vec<u8>, ToBytesError> {
         let needed_bytes = Self::MAX_BITS.div_ceil(8);
-        let mut buffer = vec![0u8; needed_bytes];
+        let mut buffer = alloc::vec![0u8; needed_bytes];
         let mut writer = BitWriter::from(buffer.as_mut_slice());
         self.write_abstract_bits(&mut writer)?;
         let bytes = writer.bytes_written();
@@ -53,7 +58,7 @@ macro_rules! impl_abstract_bits_for_UInt {
                 writer
                     .$write_method(Self::BITS, self.value())
                     .map_err(|cause| ToBytesError::BufferTooSmall {
-                        ty: std::any::type_name::<Self>(),
+                        ty: core::any::type_name::<Self>(),
                         cause,
                     })
             }
@@ -65,7 +70,7 @@ macro_rules! impl_abstract_bits_for_UInt {
                 use FromBytesError::ReadPrimitive;
                 let value = reader.$read_method(Self::BITS).map_err(|cause| {
                     ReadPrimitive(ReadErrorCause::NotEnoughInput {
-                        ty: std::any::type_name::<Self>(),
+                        ty: core::any::type_name::<Self>(),
                         cause,
                     })
                 })?;
@@ -92,7 +97,7 @@ macro_rules! impl_abstract_bits_for_core_int {
             ) -> Result<(), ToBytesError> {
                 writer.$write_method($bits, *self).map_err(|cause| {
                     ToBytesError::BufferTooSmall {
-                        ty: std::any::type_name::<Self>(),
+                        ty: core::any::type_name::<Self>(),
                         cause,
                     }
                 })
@@ -105,7 +110,7 @@ macro_rules! impl_abstract_bits_for_core_int {
                 use FromBytesError::ReadPrimitive;
                 reader.$read_method($bits).map_err(|cause| {
                     ReadPrimitive(ReadErrorCause::NotEnoughInput {
-                        ty: std::any::type_name::<Self>(),
+                        ty: core::any::type_name::<Self>(),
                         cause,
                     })
                 })
@@ -256,7 +261,7 @@ pub struct BitWriter<'a> {
 }
 
 impl core::fmt::Debug for BitWriter<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("BitWriter\n")?;
         f.write_fmt(format_args!("\tpos: {}\n", self.pos))?;
         f.write_fmt(format_args!("\tbuf: BitSlice of {} bits\n", self.buf.len()))

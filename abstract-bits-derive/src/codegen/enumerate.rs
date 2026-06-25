@@ -46,9 +46,9 @@ pub fn read(variants: &[EmptyVariant], repr: Ident, bits: usize) -> TokenStream 
         match discriminant {
             #(#variants_discriminants => Ok(Self::#variant_idents)),*,
             invalid => Err(::abstract_bits::FromBytesError::ReadEnum {
-                enum_name: std::any::type_name::<Self>(),
+                enum_name: ::core::any::type_name::<Self>(),
                 cause: ::abstract_bits::ReadErrorCause::InvalidDiscriminant {
-                    ty: std::any::type_name::<Self>(),
+                    ty: ::core::any::type_name::<Self>(),
                     got: discriminant as usize,
                 }
             }),
