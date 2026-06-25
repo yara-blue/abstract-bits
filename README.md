@@ -70,8 +70,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   the length of the `Vec`.
 - For a `Vec` field that should be read until the input (or the enclosing TLV
   value) is exhausted rather than from a length prefix, use
-  `#[abstract_bits(rest, max_bytes = <N>)]`. `<N>` bounds the serialized size in
-  bytes, which such an otherwise-unbounded field needs.
+  `#[abstract_bits(rest, max_bits = <N>)]`. `<N>` bounds the serialized size in
+  bits, which such an otherwise-unbounded field needs.
 
 ## With an enum
 - Add `#[abstract-bits(bits = <N>)]` above your enum. Replace `N` with the
@@ -98,7 +98,7 @@ struct Frame {
     source: Option<u16>,
     #[abstract_bits(length_from = data_len)]
     data: Vec<Message>,
-    #[abstract_bits(rest, max_bytes = 64)]
+    #[abstract_bits(rest, max_bits = 512)]
     trailing_data: Vec<u8>,
 }
 

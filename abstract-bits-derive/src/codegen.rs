@@ -102,10 +102,18 @@ fn normal_struct(
         .iter()
         .filter_map(Field::needed_in_struct_def)
         .collect();
-    let write_code: Vec<_> = fields.iter().map(|f| f.write_code(&ident)).collect();
-    let read_code: Vec<_> = fields.iter().map(|f| f.read_code(&ident)).collect();
+
     let min_bits_code: Vec<_> = fields.iter().map(Field::min_bits_code).collect();
     let max_bits_code: Vec<_> = fields.iter().map(Field::max_bits_code).collect();
+
+    let write_code: Vec<_> = fields.iter().map(|f| f.write_code(&ident)).collect();
+    let read_code: Vec<_> = fields
+        .iter()
+        .enumerate()
+        // Provide context about trailing fields so we can reserve space for them
+        .map(|(i, f)| f.read_code(&ident, &min_bits_code[i + 1..].iter().as_slice()))
+        .collect();
+
     let out_struct_idents: Vec<_> = fields
         .iter()
         .filter_map(Field::needed_in_struct_def)

@@ -7,7 +7,7 @@ use hex_literal::hex;
 struct Frame {
     field1: u8,
     field2: u16,
-    #[abstract_bits(rest, max_bytes = 16)]
+    #[abstract_bits(rest, max_bits = 128)]
     rest: Vec<u8>,
 }
 
@@ -16,7 +16,7 @@ struct Frame {
 struct LargerFrame {
     field1: u8,
     field2: u16,
-    #[abstract_bits(rest, max_bytes = 16)]
+    #[abstract_bits(rest, max_bits = 128)]
     rest: Vec<u16>,
 }
 
@@ -76,7 +76,7 @@ fn rest_max_length() {
 #[derive(Debug, PartialEq)]
 struct UnalignedFrame {
     header: u8,
-    #[abstract_bits(rest, max_bytes = 16)]
+    #[abstract_bits(rest, max_bits = 128)]
     rest: Vec<u7>,
 }
 
@@ -101,7 +101,7 @@ struct Triplet {
 #[derive(Debug, PartialEq)]
 struct StructRestFrame {
     header: u8,
-    #[abstract_bits(rest, max_bytes = 16)]
+    #[abstract_bits(rest, max_bits = 128)]
     rest: Vec<Triplet>,
 }
 

@@ -23,9 +23,18 @@ pub(crate) fn write(inner_type: &NormalField) -> TokenStream {
     }
 }
 
-pub(crate) fn read(inner_type: &NormalField, struct_name: &Literal) -> TokenStream {
+pub(crate) fn read(
+    inner_type: &NormalField,
+    struct_name: &Literal,
+    max_bits: usize,
+    following_min_bits: &[TokenStream],
+) -> TokenStream {
     let field_name = Literal::string(&inner_type.ident.to_string());
     let field_ident = &inner_type.ident;
+    let window = Literal::usize_unsuffixed(max_bits);
+
+    // Bits the fields after us still need
+    let reserved_bits = quote! { 0 #(+ (#following_min_bits))* };
 
     // Arbitrary integer fields are stored in a vec of _primitive_ integers
     if let Some(bits) = inner_type.bits {
@@ -34,7 +43,10 @@ pub(crate) fn read(inner_type: &NormalField, struct_name: &Literal) -> TokenStre
 
         quote_spanned! {field_ident.span()=>
             let mut #field_ident = ::std::vec::Vec::new();
-            while reader.remaining_bits() >= #element_bits && reader.bits_read() < Self::MAX_BITS {
+            let rest_start = reader.bits_read();
+            while reader.remaining_bits() >= #element_bits + (#reserved_bits)
+                && (reader.bits_read() - rest_start) + #element_bits <= #window
+            {
                 let element = #utype::read_abstract_bits(reader)
                     .map_err(|cause| cause.read_field(#struct_name, #field_name))?
                     .value();
@@ -46,8 +58,13 @@ pub(crate) fn read(inner_type: &NormalField, struct_name: &Literal) -> TokenStre
 
         quote_spanned! {inner_ty.span()=>
             let mut #field_ident = ::std::vec::Vec::new();
-            while reader.remaining_bits() >= <#inner_ty as ::abstract_bits::AbstractBits>::MIN_BITS
-                && reader.bits_read() < Self::MAX_BITS
+            let rest_start = reader.bits_read();
+            let required_bits = <#inner_ty as ::abstract_bits::AbstractBits>::MIN_BITS + (#reserved_bits);
+
+            while reader.remaining_bits()
+                >= required_bits
+                && (reader.bits_read() - rest_start)
+                    + <#inner_ty as ::abstract_bits::AbstractBits>::MIN_BITS <= #window
             {
                 let element =
                     <#inner_ty as ::abstract_bits::AbstractBits>::read_abstract_bits(reader)
@@ -62,7 +79,7 @@ pub(crate) fn min_bits() -> TokenStream {
     quote! { 0 }
 }
 
-pub(crate) fn max_bits(max_bytes: usize) -> TokenStream {
-    let bits = Literal::usize_unsuffixed(max_bytes * 8);
+pub(crate) fn max_bits(max_bits: usize) -> TokenStream {
+    let bits = Literal::usize_unsuffixed(max_bits);
     quote! { #bits }
 }

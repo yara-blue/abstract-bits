@@ -88,7 +88,7 @@ pub enum Field {
     RestList {
         full_type: NormalField,
         inner_type: NormalField,
-        max_bytes: usize,
+        max_bits: usize,
     },
     Array {
         length: syn::Expr,
@@ -194,10 +194,10 @@ impl Field {
                     controller,
                 }
             } else if attr.rest {
-                let max_bytes = attr.max_bytes.unwrap_or_else(|| {
+                let max_bits = attr.max_bits.unwrap_or_else(|| {
                     abort!(
                         ident.span(),
-                        "rest field '{}' requires a max_bytes bound",
+                        "rest field '{}' requires a max_bits bound",
                         ident
                     )
                 });
@@ -212,7 +212,7 @@ impl Field {
                 Self::RestList {
                     inner_type,
                     full_type,
-                    max_bytes,
+                    max_bits,
                 }
             } else {
                 abort!(
@@ -330,7 +330,7 @@ struct FieldAttr {
     length_from: Option<syn::Expr>,
     presence_from: Option<syn::Expr>,
     rest: bool,
-    max_bytes: Option<usize>,
+    max_bits: Option<usize>,
 }
 
 fn field_attr(field: &syn::Field) -> FieldAttr {
@@ -349,8 +349,8 @@ fn field_attr(field: &syn::Field) -> FieldAttr {
             parsed.presence_from = Some(meta.value()?.parse()?);
         } else if meta.path.is_ident("rest") {
             parsed.rest = true;
-        } else if meta.path.is_ident("max_bytes") {
-            parsed.max_bytes =
+        } else if meta.path.is_ident("max_bits") {
+            parsed.max_bits =
                 Some(meta.value()?.parse::<syn::LitInt>()?.base10_parse()?);
         } else {
             return Err(meta.error("unknown abstract_bits attribute"));
@@ -438,6 +438,7 @@ impl Model {
                 fields.push(field);
             }
             hide_same_struct_controllers(&mut fields);
+            reject_unsupported_rest_layout(&fields);
             Type::NormalStruct(fields)
         };
 
@@ -446,6 +447,32 @@ impl Model {
             vis: item.vis,
             ident: item.ident,
             ty,
+        }
+    }
+}
+
+// The only fields that can follow a `rest` field are fixed size: otherwise, parsing
+// becomes ambiguous.
+fn reject_unsupported_rest_layout(fields: &[Field]) {
+    for (i, field) in fields.iter().enumerate() {
+        let Field::RestList { full_type, .. } = field else {
+            continue;
+        };
+        for following in &fields[i + 1..] {
+            let kind = match following {
+                Field::List { .. } => "a length-prefixed list",
+                Field::Option { .. } => "an Option",
+                Field::RestList { .. } => "another rest field",
+                _ => continue,
+            };
+
+            abort!(
+                full_type.ident.span(),
+                "rest field '{}' cannot be followed by {}",
+                full_type.ident,
+                kind;
+                help = "a rest field can only be followed by fixed-size fields"
+            );
         }
     }
 }
