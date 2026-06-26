@@ -143,7 +143,10 @@ fn rest_max_length_unaligned() {
         }
     );
 
-    assert_eq!(frame.to_abstract_bytes().unwrap(), &bytes[0..bytes.len() - 1]);
+    assert_eq!(
+        frame.to_abstract_bytes().unwrap(),
+        &bytes[0..bytes.len() - 1]
+    );
 }
 
 #[abstract_bits]

@@ -350,8 +350,7 @@ fn field_attr(field: &syn::Field) -> FieldAttr {
         } else if meta.path.is_ident("rest") {
             parsed.rest = true;
         } else if meta.path.is_ident("max_bits") {
-            parsed.max_bits =
-                Some(meta.value()?.parse::<syn::LitInt>()?.base10_parse()?);
+            parsed.max_bits = Some(meta.value()?.parse::<syn::LitInt>()?.base10_parse()?);
         } else {
             return Err(meta.error("unknown abstract_bits attribute"));
         }
