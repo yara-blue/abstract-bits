@@ -28,6 +28,7 @@ pub(crate) fn read(
     struct_name: &Literal,
     max_bits: usize,
     following_min_bits: &[TokenStream],
+    following_max_bits: &[TokenStream],
 ) -> TokenStream {
     let field_name = Literal::string(&inner_type.ident.to_string());
     let field_ident = &inner_type.ident;
@@ -36,12 +37,32 @@ pub(crate) fn read(
     // Bits the fields after us still need
     let reserved_bits = quote! { 0 #(+ (#following_min_bits))* };
 
+    // Reserving the right number of bits is only correct when every following field has
+    // a fixed size. A following field with `MIN_BITS != MAX_BITS` is variable-size
+    // (a length-prefixed list, an Option, another rest field, or a struct containing
+    // any of these), which we reject here at compile time.
+    let fixed_size_assertions: Vec<_> = following_min_bits
+        .iter()
+        .zip(following_max_bits)
+        .map(|(min, max)| {
+            quote! {
+                const {
+                    assert!(
+                        (#min) == (#max),
+                        "a rest field can only be followed by fixed-size fields"
+                    );
+                }
+            }
+        })
+        .collect();
+
     // Arbitrary integer fields are stored in a vec of _primitive_ integers
     if let Some(bits) = inner_type.bits {
         let utype = arbitrary_uint(bits, field_ident.span());
         let element_bits = Literal::usize_unsuffixed(bits as usize);
 
         quote_spanned! {field_ident.span()=>
+            #(#fixed_size_assertions)*
             let mut #field_ident = ::std::vec::Vec::new();
             let rest_start = reader.bits_read();
             while reader.remaining_bits() >= #element_bits + (#reserved_bits)
@@ -57,6 +78,7 @@ pub(crate) fn read(
         let inner_ty = generics_to_fully_qualified(inner_type.out_ty.clone());
 
         quote_spanned! {inner_ty.span()=>
+            #(#fixed_size_assertions)*
             let mut #field_ident = ::std::vec::Vec::new();
             let rest_start = reader.bits_read();
             let required_bits = <#inner_ty as ::abstract_bits::AbstractBits>::MIN_BITS + (#reserved_bits);

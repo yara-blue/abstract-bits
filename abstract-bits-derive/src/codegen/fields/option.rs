@@ -72,9 +72,8 @@ pub fn write(field: &NormalField) -> TokenStream {
 }
 
 pub(crate) fn min_bits(inner_type: &NormalField) -> TokenStream {
-    let ty = &inner_type.out_ty;
     quote_spanned! {inner_type.ident.span()=>
-        #ty::MIN_BITS
+        0
     }
 }
 

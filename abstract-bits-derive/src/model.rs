@@ -437,7 +437,6 @@ impl Model {
                 fields.push(field);
             }
             hide_same_struct_controllers(&mut fields);
-            reject_unsupported_rest_layout(&fields);
             Type::NormalStruct(fields)
         };
 
@@ -446,32 +445,6 @@ impl Model {
             vis: item.vis,
             ident: item.ident,
             ty,
-        }
-    }
-}
-
-// The only fields that can follow a `rest` field are fixed size: otherwise, parsing
-// becomes ambiguous.
-fn reject_unsupported_rest_layout(fields: &[Field]) {
-    for (i, field) in fields.iter().enumerate() {
-        let Field::RestList { full_type, .. } = field else {
-            continue;
-        };
-        for following in &fields[i + 1..] {
-            let kind = match following {
-                Field::List { .. } => "a length-prefixed list",
-                Field::Option { .. } => "an Option",
-                Field::RestList { .. } => "another rest field",
-                _ => continue,
-            };
-
-            abort!(
-                full_type.ident.span(),
-                "rest field '{}' cannot be followed by {}",
-                full_type.ident,
-                kind;
-                help = "a rest field can only be followed by fixed-size fields"
-            );
         }
     }
 }
