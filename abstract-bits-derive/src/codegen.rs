@@ -111,7 +111,7 @@ fn normal_struct(
         .iter()
         .enumerate()
         // Provide context about trailing fields so we can reserve space for them
-        .map(|(i, f)| f.read_code(&ident, &min_bits_code[i + 1..].iter().as_slice()))
+        .map(|(i, f)| f.read_code(&ident, &min_bits_code[i + 1..]))
         .collect();
 
     let out_struct_idents: Vec<_> = fields
