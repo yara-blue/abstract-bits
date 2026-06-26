@@ -23,7 +23,7 @@ struct LargerFrame {
 #[test]
 fn rest_captures_trailing_bytes() {
     let bytes = hex!("aa ccbb 01 02 03").to_vec();
-    let frame = Frame::from_abstract_bits(&bytes).unwrap();
+    let frame = Frame::from_abstract_bytes(&bytes).unwrap();
 
     assert_eq!(
         frame,
@@ -33,7 +33,7 @@ fn rest_captures_trailing_bytes() {
             rest: vec![0x01, 0x02, 0x03],
         }
     );
-    assert_eq!(frame.to_abstract_bits().unwrap(), bytes);
+    assert_eq!(frame.to_abstract_bytes().unwrap(), bytes);
 }
 
 #[test]
@@ -43,10 +43,10 @@ fn rest_can_be_empty() {
         field2: 0x0002,
         rest: vec![],
     };
-    let bytes = frame.to_abstract_bits().unwrap();
+    let bytes = frame.to_abstract_bytes().unwrap();
 
     assert_eq!(bytes, hex!("01 0200").to_vec());
-    assert_eq!(Frame::from_abstract_bits(&bytes).unwrap(), frame);
+    assert_eq!(Frame::from_abstract_bytes(&bytes).unwrap(), frame);
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn rest_max_length() {
     )
     .to_vec();
 
-    let frame = Frame::from_abstract_bits(&bytes).unwrap();
+    let frame = Frame::from_abstract_bytes(&bytes).unwrap();
     assert_eq!(
         frame,
         Frame {
@@ -86,8 +86,8 @@ fn rest_unaligned_prefix_roundtrips() {
         header: 0xAA,
         rest: vec![1, 2, 3, 4, 5],
     };
-    let bytes = frame.to_abstract_bits().unwrap();
-    assert_eq!(UnalignedFrame::from_abstract_bits(&bytes).unwrap(), frame);
+    let bits = frame.to_abstract_bits().unwrap();
+    assert_eq!(UnalignedFrame::from_abstract_bits(&bits).unwrap(), frame);
 }
 
 #[abstract_bits]
@@ -115,8 +115,8 @@ fn rest_unaligned_struct_roundtrips() {
             Triplet { a: 3, b: true },
         ],
     };
-    let bytes = frame.to_abstract_bits().unwrap();
-    assert_eq!(StructRestFrame::from_abstract_bits(&bytes).unwrap(), frame);
+    let bits = frame.to_abstract_bits().unwrap();
+    assert_eq!(StructRestFrame::from_abstract_bits(&bits).unwrap(), frame);
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn rest_max_length_unaligned() {
     )
     .to_vec();
 
-    let frame = LargerFrame::from_abstract_bits(&bytes).unwrap();
+    let frame = LargerFrame::from_abstract_bytes(&bytes).unwrap();
     assert_eq!(
         frame,
         LargerFrame {
@@ -142,4 +142,6 @@ fn rest_max_length_unaligned() {
             ],
         }
     );
+
+    assert_eq!(frame.to_abstract_bytes().unwrap(), &bytes[0..bytes.len() - 1]);
 }
