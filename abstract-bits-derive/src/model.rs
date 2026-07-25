@@ -1,4 +1,4 @@
-use proc_macro_error2::{OptionExt, abort};
+use proc_macro_error3::{OptionExt, abort};
 use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::parse_quote_spanned;
 use syn::spanned::Spanned;
