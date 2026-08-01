@@ -165,42 +165,70 @@ impl Field {
             .ident
             .as_ref()
             .expect("unit structs are not tranformed into model::Field");
-        let attr = field_attr(&field);
+
         if ident == "reserved" {
             let padding = padding_from_type(&field.ty)
                 .unwrap_or_else(|(msg, span)| abort!(span, msg));
-            Self::PaddBits(padding)
-        } else if let Some(option_stripped) = strip_option(field.clone()) {
-            let controller = attr.presence_from.unwrap_or_else(|| {
-                abort!(
-                    ident.span(),
-                    "Option field '{}' requires presence_from attribute",
-                    ident
-                )
-            });
-            Self::Option {
-                inner_type: NormalField::from(option_stripped),
-                full_type: NormalField::from(field),
-                controller,
+
+            return Self::PaddBits(padding);
+        }
+
+        if let syn::Type::Array(a) = &field.ty {
+            return Self::Array {
+                inner_type: *a.elem.clone(),
+                length: a.len.clone(),
+                field,
+            };
+        }
+
+        match parse_field_attr(&field) {
+            FieldAttr::Unannotated => Self::Normal(NormalField::from(field)),
+
+            FieldAttr::PresenceFrom { field: controller } => {
+                let option_stripped = strip_option(field.clone()).unwrap_or_else(|| {
+                    abort!(
+                        ident.span(),
+                        "Option field '{}' requires presence_from attribute",
+                        ident
+                    )
+                });
+
+                Self::Option {
+                    inner_type: NormalField::from(option_stripped),
+                    full_type: NormalField::from(field),
+                    controller,
+                }
             }
-        } else if let Some(vec_stripped) = strip_vec(field.clone()) {
-            if let Some(controller) = attr.length_from {
+
+            FieldAttr::LengthFrom { field: controller } => {
+                let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
+                    abort!(
+                        ident.span(),
+                        "Field with length_from attribute '{}' must be a Vec",
+                        ident
+                    )
+                });
+
                 let max_len =
                     max_size_from_controller_field(&controller, previous_fields);
+
                 Self::List {
                     inner_type: NormalField::from(vec_stripped),
                     max_len,
                     full_type: NormalField::from(field),
                     controller,
                 }
-            } else if attr.rest {
-                let max_bits = attr.max_bits.unwrap_or_else(|| {
+            }
+
+            FieldAttr::Rest { max_bits } => {
+                let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
                     abort!(
                         ident.span(),
-                        "rest field '{}' requires a max_bits bound",
+                        "Field with rest attribute '{}' must be a Vec",
                         ident
                     )
                 });
+
                 let inner_type = NormalField::from(vec_stripped);
                 let mut full_type = NormalField::from(field);
                 if inner_type.bits.is_some() {
@@ -209,26 +237,13 @@ impl Field {
                         inner_out_ty.span()=> Vec<#inner_out_ty>
                     );
                 }
+
                 Self::RestList {
                     inner_type,
                     full_type,
                     max_bits,
                 }
-            } else {
-                abort!(
-                    ident.span(),
-                    "List field '{}' requires a length_from or rest attribute",
-                    ident
-                )
             }
-        } else if let syn::Type::Array(a) = &field.ty {
-            Self::Array {
-                inner_type: *a.elem.clone(),
-                length: a.len.clone(),
-                field,
-            }
-        } else {
-            Self::Normal(NormalField::from(field))
         }
     }
 }
@@ -325,39 +340,58 @@ fn strip_generic(field: syn::Field, outer_ident: &str) -> Option<syn::Field> {
     Some(new_field)
 }
 
-#[derive(Default)]
-struct FieldAttr {
-    length_from: Option<syn::Expr>,
-    presence_from: Option<syn::Expr>,
-    rest: bool,
-    max_bits: Option<usize>,
+#[derive(Debug)]
+enum FieldAttr {
+    Unannotated,
+    LengthFrom { field: syn::Expr },
+    PresenceFrom { field: syn::Expr },
+    Rest { max_bits: usize },
 }
 
-fn field_attr(field: &syn::Field) -> FieldAttr {
-    let mut parsed = FieldAttr::default();
+fn parse_field_attr(field: &syn::Field) -> FieldAttr {
     let Some(attr) = field
         .attrs
         .iter()
         .find(|a| a.path().is_ident("abstract_bits"))
     else {
-        return parsed;
+        return FieldAttr::Unannotated;
     };
+
+    // `#[abstract_bits(rest, max_bits = 128)]` has two attributes, not one, and has a
+    // bit more parsing machinery.
+    let mut is_parsing_rest = false;
+    let mut result: Option<FieldAttr> = None;
+
     attr.parse_nested_meta(|meta| {
+        if is_parsing_rest && !meta.path.is_ident("max_bits") {
+            return Err(meta.error("expected max_bits attribute"));
+        }
+
         if meta.path.is_ident("length_from") {
-            parsed.length_from = Some(meta.value()?.parse()?);
+            result = Some(FieldAttr::LengthFrom {
+                field: meta.value()?.parse()?,
+            });
         } else if meta.path.is_ident("presence_from") {
-            parsed.presence_from = Some(meta.value()?.parse()?);
+            result = Some(FieldAttr::PresenceFrom {
+                field: meta.value()?.parse()?,
+            });
         } else if meta.path.is_ident("rest") {
-            parsed.rest = true;
+            is_parsing_rest = true;
         } else if meta.path.is_ident("max_bits") {
-            parsed.max_bits = Some(meta.value()?.parse::<syn::LitInt>()?.base10_parse()?);
+            result = Some(FieldAttr::Rest {
+                max_bits: meta.value()?.parse::<syn::LitInt>()?.base10_parse()?,
+            });
         } else {
             return Err(meta.error("unknown abstract_bits attribute"));
         }
+
         Ok(())
     })
     .unwrap_or_else(|e| abort!(attr.span(), "invalid abstract_bits attribute: {}", e));
-    parsed
+
+    result.unwrap_or_else(|| {
+        abort!(attr.span(), "abstract_bits attribute must have a value")
+    })
 }
 
 impl Model {
