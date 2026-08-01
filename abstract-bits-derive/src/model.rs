@@ -409,12 +409,13 @@ impl Model {
 
     pub(crate) fn from_enum(item: syn::ItemEnum, attr: TokenStream) -> Self {
         Self::reject_item_generics(&item.generics);
-        let repr = require_repr_attr(&item.attrs, item.span());
 
         let Ok(bits) = get_num_bits(attr) else {
             abort!(item.span(), "Every enum must be attributed with its serialized size \
                 in bits."; note = "Example: #[abstract_bits::abstract_bits(bits=2)]");
         };
+
+        let repr = require_repr_attr(&item.attrs, item.span());
         let variants: Vec<_> = item
             .variants
             .clone()
