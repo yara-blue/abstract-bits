@@ -182,8 +182,8 @@ impl Field {
         }
 
         match parse_field_attr(&field) {
-            FieldAttr::Unannotated => Self::Normal(NormalField::from(field)),
-            FieldAttr::PresenceFrom { field: controller } => {
+            None => Self::Normal(NormalField::from(field)),
+            Some(FieldAttr::PresenceFrom { field: controller }) => {
                 let option_stripped = strip_option(field.clone()).unwrap_or_else(|| {
                     abort!(
                         ident.span(),
@@ -198,7 +198,7 @@ impl Field {
                     controller,
                 }
             }
-            FieldAttr::LengthFrom { field: controller } => {
+            Some(FieldAttr::LengthFrom { field: controller }) => {
                 let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
                     abort!(
                         ident.span(),
@@ -217,7 +217,7 @@ impl Field {
                     controller,
                 }
             }
-            FieldAttr::Rest { max_bits } => {
+            Some(FieldAttr::Rest { max_bits }) => {
                 let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
                     abort!(
                         ident.span(),
@@ -339,19 +339,18 @@ fn strip_generic(field: syn::Field, outer_ident: &str) -> Option<syn::Field> {
 
 #[derive(Debug)]
 enum FieldAttr {
-    Unannotated,
     LengthFrom { field: syn::Expr },
     PresenceFrom { field: syn::Expr },
     Rest { max_bits: usize },
 }
 
-fn parse_field_attr(field: &syn::Field) -> FieldAttr {
+fn parse_field_attr(field: &syn::Field) -> Option<FieldAttr> {
     let Some(attr) = field
         .attrs
         .iter()
         .find(|a| a.path().is_ident("abstract_bits"))
     else {
-        return FieldAttr::Unannotated;
+        return None;
     };
 
     let mut result: Option<FieldAttr> = None;
@@ -394,9 +393,9 @@ fn parse_field_attr(field: &syn::Field) -> FieldAttr {
     })
     .unwrap_or_else(|e| abort!(attr.span(), "invalid abstract_bits attribute: {}", e));
 
-    result.unwrap_or_else(|| {
+    Some(result.unwrap_or_else(|| {
         abort!(attr.span(), "abstract_bits attribute must have a value")
-    })
+    }))
 }
 
 impl Model {
