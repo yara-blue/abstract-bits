@@ -85,6 +85,11 @@ pub enum Field {
         max_len: usize,
         controller: syn::Expr,
     },
+    RestList {
+        full_type: NormalField,
+        inner_type: NormalField,
+        max_bits: usize,
+    },
     Array {
         length: syn::Expr,
         inner_type: syn::Type,
@@ -106,6 +111,9 @@ impl Field {
                 full_type: field, ..
             }
             | Field::List {
+                full_type: field, ..
+            }
+            | Field::RestList {
                 full_type: field, ..
             } => {
                 let mut filtered_field = field.clone();
@@ -157,46 +165,82 @@ impl Field {
             .ident
             .as_ref()
             .expect("unit structs are not tranformed into model::Field");
+
         if ident == "reserved" {
             let padding = padding_from_type(&field.ty)
                 .unwrap_or_else(|(msg, span)| abort!(span, msg));
-            Self::PaddBits(padding)
-        } else if let Some(option_stripped) = strip_option(field.clone()) {
-            let controller = presence_from_attr(&field).unwrap_or_else(|| {
-                abort!(
-                    ident.span(),
-                    "Option field '{}' requires presence_from attribute",
-                    ident
-                )
-            });
-            Self::Option {
-                inner_type: NormalField::from(option_stripped),
-                full_type: NormalField::from(field),
-                controller,
-            }
-        } else if let Some(vec_stripped) = strip_vec(field.clone()) {
-            let controller = length_from_attr(&field).unwrap_or_else(|| {
-                abort!(
-                    ident.span(),
-                    "List field '{}' requires length_from attribute",
-                    ident
-                )
-            });
-            let max_len = max_size_from_controller_field(&controller, previous_fields);
-            Self::List {
-                inner_type: NormalField::from(vec_stripped),
-                max_len,
-                full_type: NormalField::from(field),
-                controller,
-            }
-        } else if let syn::Type::Array(a) = &field.ty {
-            Self::Array {
+
+            return Self::PaddBits(padding);
+        }
+
+        if let syn::Type::Array(a) = &field.ty {
+            return Self::Array {
                 inner_type: *a.elem.clone(),
                 length: a.len.clone(),
                 field,
+            };
+        }
+
+        match parse_field_attr(&field) {
+            None => Self::Normal(NormalField::from(field)),
+            Some(FieldAttr::PresenceFrom { field: controller }) => {
+                let option_stripped = strip_option(field.clone()).unwrap_or_else(|| {
+                    abort!(
+                        ident.span(),
+                        "Option field '{}' requires presence_from attribute",
+                        ident
+                    )
+                });
+
+                Self::Option {
+                    inner_type: NormalField::from(option_stripped),
+                    full_type: NormalField::from(field),
+                    controller,
+                }
             }
-        } else {
-            Self::Normal(NormalField::from(field))
+            Some(FieldAttr::LengthFrom { field: controller }) => {
+                let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
+                    abort!(
+                        ident.span(),
+                        "Field with length_from attribute '{}' must be a Vec",
+                        ident
+                    )
+                });
+
+                let max_len =
+                    max_size_from_controller_field(&controller, previous_fields);
+
+                Self::List {
+                    inner_type: NormalField::from(vec_stripped),
+                    max_len,
+                    full_type: NormalField::from(field),
+                    controller,
+                }
+            }
+            Some(FieldAttr::Rest { max_bits }) => {
+                let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
+                    abort!(
+                        ident.span(),
+                        "Field with rest attribute '{}' must be a Vec",
+                        ident
+                    )
+                });
+
+                let inner_type = NormalField::from(vec_stripped);
+                let mut full_type = NormalField::from(field);
+                if inner_type.bits.is_some() {
+                    let inner_out_ty = &inner_type.out_ty;
+                    full_type.out_ty = parse_quote_spanned!(
+                        inner_out_ty.span()=> Vec<#inner_out_ty>
+                    );
+                }
+
+                Self::RestList {
+                    inner_type,
+                    full_type,
+                    max_bits,
+                }
+            }
         }
     }
 }
@@ -293,68 +337,65 @@ fn strip_generic(field: syn::Field, outer_ident: &str) -> Option<syn::Field> {
     Some(new_field)
 }
 
-fn length_from_attr(field: &syn::Field) -> Option<syn::Expr> {
-    fn parse(attr: &Attribute) -> Option<Result<syn::Expr, ()>> {
-        let Ok(list) = attr.meta.require_list() else {
-            return Some(Err(()));
-        };
-        let mut tokens = list.tokens.clone().into_iter();
-        match tokens.next() {
-            Some(TokenTree::Ident(ident)) if ident == "length_from" => (),
-            _ => return None,
-        }
-        match tokens.next() {
-            Some(TokenTree::Punct(punct)) if punct.as_char() == '=' => (),
-            _ => return Some(Err(())),
-        }
-
-        // Parse remaining tokens as expression
-        Some(syn::parse2::<syn::Expr>(tokens.collect()).map_err(|_| ()))
-    }
-
-    let attr = field
-        .attrs
-        .iter()
-        .find(|a| a.path().is_ident("abstract_bits"))?;
-
-    match parse(attr)? {
-        Ok(expr) => Some(expr),
-        Err(_) => abort!(attr.span(), "invalid abstract_bits attribute"; 
-            help = "The syntax is: #[abstract_bits(length_from = <expr>)] with expr \
-            an expression controlling this vec's length"),
-    }
+#[derive(Debug)]
+enum FieldAttr {
+    LengthFrom { field: syn::Expr },
+    PresenceFrom { field: syn::Expr },
+    Rest { max_bits: usize },
 }
 
-fn presence_from_attr(field: &syn::Field) -> Option<syn::Expr> {
-    fn parse(attr: &Attribute) -> Option<Result<syn::Expr, ()>> {
-        let Ok(list) = attr.meta.require_list() else {
-            return Some(Err(()));
-        };
-        let mut tokens = list.tokens.clone().into_iter();
-        match tokens.next() {
-            Some(TokenTree::Ident(ident)) if ident == "presence_from" => (),
-            _ => return None,
-        }
-        match tokens.next() {
-            Some(TokenTree::Punct(punct)) if punct.as_char() == '=' => (),
-            _ => return Some(Err(())),
-        }
-
-        // Parse remaining tokens as expression
-        Some(syn::parse2::<syn::Expr>(tokens.collect()).map_err(|_| ()))
-    }
-
-    let attr = field
+fn parse_field_attr(field: &syn::Field) -> Option<FieldAttr> {
+    let Some(attr) = field
         .attrs
         .iter()
-        .find(|a| a.path().is_ident("abstract_bits"))?;
+        .find(|a| a.path().is_ident("abstract_bits"))
+    else {
+        return None;
+    };
 
-    match parse(attr)? {
-        Ok(expr) => Some(expr),
-        Err(_) => abort!(attr.span(), "invalid abstract_bits attribute"; 
-            help = "The syntax is: #[abstract_bits(presence_from = <expr>)] where the \
-            boolean expr controls this option's presence"),
-    }
+    let mut result: Option<FieldAttr> = None;
+
+    attr.parse_nested_meta(|meta| {
+        if meta.path.is_ident("length_from") {
+            result = Some(FieldAttr::LengthFrom {
+                field: meta.value()?.parse()?,
+            });
+        } else if meta.path.is_ident("presence_from") {
+            result = Some(FieldAttr::PresenceFrom {
+                field: meta.value()?.parse()?,
+            });
+        } else if meta.path.is_ident("rest") {
+            let mut max_bits: Option<usize> = None;
+
+            meta.parse_nested_meta(|rest_meta| {
+                if !rest_meta.path.is_ident("max_bits") {
+                    return Err(rest_meta.error("expected max_bits attribute"));
+                }
+
+                max_bits =
+                    Some(rest_meta.value()?.parse::<syn::LitInt>()?.base10_parse()?);
+
+                Ok(())
+            })?;
+
+            result = Some(FieldAttr::Rest { max_bits: max_bits.unwrap_or_else(|| {
+                abort!(
+                    attr.span(),
+                    "rest attribute must have a max_bits value";
+                    note = "Example: #[abstract_bits::abstract_bits(rest(max_bits=16))]"
+                )
+            }) });
+        } else {
+            return Err(meta.error("unknown abstract_bits attribute"));
+        }
+
+        Ok(())
+    })
+    .unwrap_or_else(|e| abort!(attr.span(), "invalid abstract_bits attribute: {}", e));
+
+    Some(result.unwrap_or_else(|| {
+        abort!(attr.span(), "abstract_bits attribute must have a value")
+    }))
 }
 
 impl Model {
@@ -429,10 +470,20 @@ impl Model {
             Type::UnitStruct(field)
         } else {
             let mut fields = Vec::new();
+            let mut seen_rest_field = false;
+
             for item in item.fields {
-                let field = Field::from(item, &fields);
+                let field = Field::from(item.clone(), &fields);
+
+                if matches!(field, Field::RestList { .. }) {
+                    seen_rest_field = true;
+                } else if seen_rest_field {
+                    abort!(item.span(), "no fields can appear after a rest field");
+                }
+
                 fields.push(field);
             }
+
             hide_same_struct_controllers(&mut fields);
             Type::NormalStruct(fields)
         };
@@ -512,22 +563,18 @@ fn verify_all_discriminants_fit(variants: &[EmptyVariant], bits: usize) {
 }
 
 fn get_num_bits(attr: TokenStream) -> Result<usize, ()> {
-    let mut tokens = attr.into_iter();
-    match tokens.next() {
-        Some(TokenTree::Ident(item)) if item == "bits" => (),
-        _ => return Err(()),
+    let meta: syn::MetaNameValue = syn::parse2(attr).map_err(|_| ())?;
+    if !meta.path.is_ident("bits") {
+        return Err(());
     }
-
-    match tokens.next() {
-        Some(TokenTree::Punct(punct)) if punct.as_char() == '=' => (),
-        _ => return Err(()),
-    }
-
-    let Some(TokenTree::Literal(num)) = tokens.next() else {
+    let syn::Expr::Lit(syn::ExprLit {
+        lit: syn::Lit::Int(num),
+        ..
+    }) = meta.value
+    else {
         return Err(());
     };
-
-    num.to_string().parse().map_err(|_| ())
+    num.base10_parse().map_err(|_| ())
 }
 
 fn require_repr_attr(attrs: &[Attribute], span: Span) -> Ident {

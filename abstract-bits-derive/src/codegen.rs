@@ -102,10 +102,17 @@ fn normal_struct(
         .iter()
         .filter_map(Field::needed_in_struct_def)
         .collect();
-    let write_code: Vec<_> = fields.iter().map(|f| f.write_code(&ident)).collect();
-    let read_code: Vec<_> = fields.iter().map(|f| f.read_code(&ident)).collect();
+
     let min_bits_code: Vec<_> = fields.iter().map(Field::min_bits_code).collect();
     let max_bits_code: Vec<_> = fields.iter().map(Field::max_bits_code).collect();
+
+    let write_code: Vec<_> = fields.iter().map(|f| f.write_code(&ident)).collect();
+    let read_code: Vec<_> = fields
+        .iter()
+        .enumerate()
+        .map(|(i, f)| f.read_code(&ident, &min_bits_code[i + 1..]))
+        .collect();
+
     let out_struct_idents: Vec<_> = fields
         .iter()
         .filter_map(Field::needed_in_struct_def)
@@ -174,6 +181,15 @@ impl ToTokens for super::model::EmptyVariant {
 
         proc_macro2::Literal::usize_unsuffixed(self.discriminant).to_tokens(tokens)
     }
+}
+
+/// Path to abstract-bits' re-exported `uN` arbitrary-int type, e.g. `::abstract_bits::u7`.
+pub fn arbitrary_uint(
+    bits: impl std::fmt::Display,
+    span: proc_macro2::Span,
+) -> syn::Type {
+    let ident = Ident::new(&format!("u{bits}"), span);
+    syn::parse_quote_spanned!(span=> ::abstract_bits::#ident)
 }
 
 pub fn is_primitive(bits: usize) -> Option<TokenStream> {

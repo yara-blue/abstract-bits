@@ -4,7 +4,7 @@ use syn::Ident;
 
 use crate::model::EmptyVariant;
 
-use super::is_primitive;
+use super::{arbitrary_uint, is_primitive};
 
 pub(crate) fn write(repr: Ident, bits: usize) -> TokenStream {
     if is_primitive(bits).is_some() {
@@ -12,8 +12,7 @@ pub(crate) fn write(repr: Ident, bits: usize) -> TokenStream {
             ::abstract_bits::AbstractBits::write_abstract_bits(&(*self as #repr), writer)
         }
     } else {
-        let utype: syn::Type = syn::parse_str(&format!("::abstract_bits::u{bits}"))
-            .expect("valid type path");
+        let utype = arbitrary_uint(bits, repr.span());
         quote_spanned! {repr.span()=>
             let discriminant = #utype::new(*self as #repr);
             ::abstract_bits::AbstractBits::write_abstract_bits(&discriminant, writer)
@@ -33,8 +32,7 @@ pub fn read(variants: &[EmptyVariant], repr: Ident, bits: usize) -> TokenStream 
             let discriminant = #repr::read_abstract_bits(reader)?;
         }
     } else {
-        let utype: syn::Type = syn::parse_str(&format!("::abstract_bits::u{bits}"))
-            .expect("valid type path");
+        let utype = arbitrary_uint(bits, repr.span());
         quote_spanned! {repr.span()=>
             let discriminant = #utype::read_abstract_bits(reader)?;
             let discriminant = discriminant.value();

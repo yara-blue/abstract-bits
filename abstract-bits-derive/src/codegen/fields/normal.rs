@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, quote_spanned};
 use syn::spanned::Spanned;
 
-use crate::codegen::generics_to_fully_qualified;
+use crate::codegen::{arbitrary_uint, generics_to_fully_qualified};
 use crate::model::NormalField;
 
 pub fn read(
@@ -17,8 +17,7 @@ pub fn read(
 ) -> TokenStream {
     let field_name = proc_macro2::Literal::string(&ident.to_string());
     if let Some(bits) = bits {
-        let utype: syn::Type = syn::parse_str(&format!("::abstract_bits::u{bits}"))
-            .expect("should be valid type path");
+        let utype = arbitrary_uint(bits, out_ty.span());
         quote_spanned! {out_ty.span()=>
             let #ident = #utype::read_abstract_bits(reader)
                 .map_err(|cause| cause.read_field(#struct_name, #field_name))?;
@@ -42,8 +41,7 @@ pub fn write(
     }: &NormalField,
 ) -> TokenStream {
     if let Some(bits) = *bits {
-        let utype: syn::Type = syn::parse_str(&format!("::abstract_bits::u{bits}"))
-            .expect("should be valid type path");
+        let utype = arbitrary_uint(bits, out_ty.span());
         quote_spanned! {out_ty.span()=>
             let #ident = #utype::new(self.#ident);
             #ident.write_abstract_bits(writer)?;

@@ -3,7 +3,7 @@ use quote::quote_spanned;
 use syn::Expr;
 use syn::spanned::Spanned;
 
-use crate::codegen::generics_to_fully_qualified;
+use crate::codegen::{arbitrary_uint, generics_to_fully_qualified};
 use crate::model::NormalField;
 
 pub fn read_field_code(
@@ -17,8 +17,7 @@ pub fn read_field_code(
 ) -> TokenStream {
     let field_name = proc_macro2::Literal::string(&ident.to_string());
     if let Some(bits) = bits {
-        let utype: syn::Type = syn::parse_str(&format!("::abstract_bits::u{bits}"))
-            .expect("should be valid type path");
+        let utype = arbitrary_uint(bits, out_ty.span());
         quote_spanned! {out_ty.span()=>
             let #ident = #utype::read_abstract_bits(reader)
                 .map_err(|cause| cause.read_option(#struct_name, #field_name))?;
@@ -54,8 +53,7 @@ pub fn read(
 pub fn write(field: &NormalField) -> TokenStream {
     let field_ident = &field.ident;
     let write_code = if let Some(bits) = field.bits {
-        let utype: syn::Type = syn::parse_str(&format!("::abstract_bits::u{bits}"))
-            .expect("should be valid type path");
+        let utype = arbitrary_uint(bits, field.out_ty.span());
         quote_spanned! {field.out_ty.span()=>
             let #field_ident = #utype::new(#field_ident);
             #field_ident.write_abstract_bits(writer)?;
@@ -74,9 +72,8 @@ pub fn write(field: &NormalField) -> TokenStream {
 }
 
 pub(crate) fn min_bits(inner_type: &NormalField) -> TokenStream {
-    let ty = &inner_type.out_ty;
     quote_spanned! {inner_type.ident.span()=>
-        #ty::MIN_BITS
+        0
     }
 }
 
