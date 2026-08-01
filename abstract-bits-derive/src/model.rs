@@ -183,7 +183,6 @@ impl Field {
 
         match parse_field_attr(&field) {
             FieldAttr::Unannotated => Self::Normal(NormalField::from(field)),
-
             FieldAttr::PresenceFrom { field: controller } => {
                 let option_stripped = strip_option(field.clone()).unwrap_or_else(|| {
                     abort!(
@@ -199,7 +198,6 @@ impl Field {
                     controller,
                 }
             }
-
             FieldAttr::LengthFrom { field: controller } => {
                 let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
                     abort!(
@@ -219,7 +217,6 @@ impl Field {
                     controller,
                 }
             }
-
             FieldAttr::Rest { max_bits } => {
                 let vec_stripped = strip_vec(field.clone()).unwrap_or_else(|| {
                     abort!(
