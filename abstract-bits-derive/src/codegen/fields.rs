@@ -14,7 +14,6 @@ impl Field {
         &self,
         struct_ident: &syn::Ident,
         following_min_bits: &[TokenStream],
-        following_max_bits: &[TokenStream],
     ) -> TokenStream {
         let struct_name = proc_macro2::Literal::string(&struct_ident.to_string());
         match self {
@@ -34,13 +33,7 @@ impl Field {
                 inner_type,
                 max_bits,
                 ..
-            } => rest_list::read(
-                inner_type,
-                &struct_name,
-                *max_bits,
-                following_min_bits,
-                following_max_bits,
-            ),
+            } => rest_list::read(inner_type, &struct_name, *max_bits, following_min_bits),
             Field::HiddenController { field, .. } => normal::read(field, &struct_name),
             Field::Array {
                 length,

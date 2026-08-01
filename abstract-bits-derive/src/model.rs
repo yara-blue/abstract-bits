@@ -471,10 +471,20 @@ impl Model {
             Type::UnitStruct(field)
         } else {
             let mut fields = Vec::new();
+            let mut seen_rest_field = false;
+
             for item in item.fields {
-                let field = Field::from(item, &fields);
+                let field = Field::from(item.clone(), &fields);
+
+                if matches!(field, Field::RestList { .. }) {
+                    seen_rest_field = true;
+                } else if seen_rest_field {
+                    abort!(item.span(), "no fields can appear after a rest field");
+                }
+
                 fields.push(field);
             }
+
             hide_same_struct_controllers(&mut fields);
             Type::NormalStruct(fields)
         };
