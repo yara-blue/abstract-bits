@@ -354,16 +354,9 @@ fn parse_field_attr(field: &syn::Field) -> FieldAttr {
         return FieldAttr::Unannotated;
     };
 
-    // `#[abstract_bits(rest, max_bits = 128)]` has two attributes, not one, and has a
-    // bit more parsing machinery.
-    let mut is_parsing_rest = false;
     let mut result: Option<FieldAttr> = None;
 
     attr.parse_nested_meta(|meta| {
-        if is_parsing_rest && !meta.path.is_ident("max_bits") {
-            return Err(meta.error("expected max_bits attribute"));
-        }
-
         if meta.path.is_ident("length_from") {
             result = Some(FieldAttr::LengthFrom {
                 field: meta.value()?.parse()?,
@@ -373,11 +366,26 @@ fn parse_field_attr(field: &syn::Field) -> FieldAttr {
                 field: meta.value()?.parse()?,
             });
         } else if meta.path.is_ident("rest") {
-            is_parsing_rest = true;
-        } else if meta.path.is_ident("max_bits") {
-            result = Some(FieldAttr::Rest {
-                max_bits: meta.value()?.parse::<syn::LitInt>()?.base10_parse()?,
-            });
+            let mut max_bits: Option<usize> = None;
+
+            meta.parse_nested_meta(|rest_meta| {
+                if !rest_meta.path.is_ident("max_bits") {
+                    return Err(rest_meta.error("expected max_bits attribute"));
+                }
+
+                max_bits =
+                    Some(rest_meta.value()?.parse::<syn::LitInt>()?.base10_parse()?);
+
+                Ok(())
+            })?;
+
+            result = Some(FieldAttr::Rest { max_bits: max_bits.unwrap_or_else(|| {
+                abort!(
+                    attr.span(),
+                    "rest attribute must have a max_bits value";
+                    note = "Example: #[abstract_bits::abstract_bits(rest(max_bits=16))]"
+                )
+            }) });
         } else {
             return Err(meta.error("unknown abstract_bits attribute"));
         }
