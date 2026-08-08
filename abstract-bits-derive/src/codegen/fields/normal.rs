@@ -56,7 +56,7 @@ pub fn write(
 pub(crate) fn min_bits(normal_field: &crate::model::NormalField) -> TokenStream {
     let ty = &normal_field.out_ty;
     if let Some(int) = normal_field.arbitrary_int {
-        proc_macro2::Literal::usize_unsuffixed(int.bits as usize).to_token_stream()
+        proc_macro2::Literal::usize_unsuffixed(int.bits).to_token_stream()
     } else {
         quote_spanned! {normal_field.ident.span()=>
             #ty::MIN_BITS
@@ -67,7 +67,7 @@ pub(crate) fn min_bits(normal_field: &crate::model::NormalField) -> TokenStream 
 pub(crate) fn max_bits(normal_field: &crate::model::NormalField) -> TokenStream {
     let ty = &normal_field.out_ty;
     if let Some(int) = normal_field.arbitrary_int {
-        proc_macro2::Literal::usize_unsuffixed(int.bits as usize).to_token_stream()
+        proc_macro2::Literal::usize_unsuffixed(int.bits).to_token_stream()
     } else {
         quote_spanned! {normal_field.ident.span()=>
                 #ty::MAX_BITS

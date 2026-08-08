@@ -43,7 +43,7 @@ pub struct NormalField {
 /// A `u<N>`/`i<N>` field type that is not a native rust integer
 #[derive(Debug, Clone, Copy)]
 pub struct ArbitraryInt {
-    pub bits: u8,
+    pub bits: usize,
     pub signed: bool,
 }
 

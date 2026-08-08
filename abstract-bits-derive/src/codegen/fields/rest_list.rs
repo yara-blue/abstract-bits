@@ -39,7 +39,7 @@ pub(crate) fn read(
     // Arbitrary integer fields are stored in a vec of _primitive_ integers
     if let Some(int) = inner_type.arbitrary_int {
         let int_ty = arbitrary_int_ty(int, field_ident.span());
-        let element_bits = Literal::usize_unsuffixed(int.bits as usize);
+        let element_bits = Literal::usize_unsuffixed(int.bits);
 
         quote_spanned! {field_ident.span()=>
             let mut #field_ident = ::std::vec::Vec::new();

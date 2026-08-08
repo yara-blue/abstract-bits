@@ -183,15 +183,6 @@ impl ToTokens for super::model::EmptyVariant {
     }
 }
 
-/// Path to abstract-bits' re-exported `uN` arbitrary-int type, e.g. `::abstract_bits::u7`.
-pub fn arbitrary_uint(
-    bits: impl std::fmt::Display,
-    span: proc_macro2::Span,
-) -> syn::Type {
-    let ident = Ident::new(&format!("u{bits}"), span);
-    syn::parse_quote_spanned!(span=> ::abstract_bits::#ident)
-}
-
 /// Path to abstract-bits' re-exported `uN`/`iN` arbitrary-int type, e.g. `::abstract_bits::i7`.
 pub fn arbitrary_int_ty(int: ArbitraryInt, span: proc_macro2::Span) -> syn::Type {
     let prefix = if int.signed { "i" } else { "u" };
