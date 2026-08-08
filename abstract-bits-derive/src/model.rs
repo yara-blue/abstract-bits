@@ -170,9 +170,7 @@ fn padding_from_type(ty: &syn::Type) -> Result<u8, (&'static str, Span)> {
     }
 }
 
-fn arbitrary_int_from_type(
-    ty: &syn::Type,
-) -> Result<ArbitraryInt, (&'static str, Span)> {
+fn arbitrary_int_from_type(ty: &syn::Type) -> Result<ArbitraryInt, (&'static str, Span)> {
     let syn::Type::Path(ty) = ty else {
         abort!(ty.span(), "only normal types are supported");
     };
