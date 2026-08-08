@@ -2,16 +2,16 @@ use proc_macro2::{Literal, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
-use crate::codegen::{arbitrary_uint, generics_to_fully_qualified};
+use crate::codegen::{arbitrary_int_ty, generics_to_fully_qualified};
 use crate::model::NormalField;
 
 pub(crate) fn write(inner_type: &NormalField) -> TokenStream {
     let field_ident = &inner_type.ident;
-    if let Some(bits) = inner_type.bits {
-        let utype = arbitrary_uint(bits, field_ident.span());
+    if let Some(int) = inner_type.arbitrary_int {
+        let int_ty = arbitrary_int_ty(int, field_ident.span());
         quote_spanned! {field_ident.span()=>
             for element in &self.#field_ident {
-                #utype::new(*element).write_abstract_bits(writer)?;
+                #int_ty::new(*element).write_abstract_bits(writer)?;
             }
         }
     } else {
@@ -37,9 +37,9 @@ pub(crate) fn read(
     let reserved_bits = quote! { 0 #(+ (#following_min_bits))* };
 
     // Arbitrary integer fields are stored in a vec of _primitive_ integers
-    if let Some(bits) = inner_type.bits {
-        let utype = arbitrary_uint(bits, field_ident.span());
-        let element_bits = Literal::usize_unsuffixed(bits as usize);
+    if let Some(int) = inner_type.arbitrary_int {
+        let int_ty = arbitrary_int_ty(int, field_ident.span());
+        let element_bits = Literal::usize_unsuffixed(int.bits as usize);
 
         quote_spanned! {field_ident.span()=>
             let mut #field_ident = ::std::vec::Vec::new();
@@ -47,7 +47,7 @@ pub(crate) fn read(
             while reader.remaining_bits() >= #element_bits + (#reserved_bits)
                 && (reader.bits_read() - rest_start) + #element_bits <= #window
             {
-                let element = #utype::read_abstract_bits(reader)
+                let element = #int_ty::read_abstract_bits(reader)
                     .map_err(|cause| cause.read_field(#struct_name, #field_name))?
                     .value();
                 #field_ident.push(element);

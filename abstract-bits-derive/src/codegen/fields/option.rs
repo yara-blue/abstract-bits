@@ -3,23 +3,23 @@ use quote::quote_spanned;
 use syn::Expr;
 use syn::spanned::Spanned;
 
-use crate::codegen::{arbitrary_uint, generics_to_fully_qualified};
+use crate::codegen::{arbitrary_int_ty, generics_to_fully_qualified};
 use crate::model::NormalField;
 
 pub fn read_field_code(
     NormalField {
         ident,
         out_ty,
-        bits,
+        arbitrary_int,
         ..
     }: &NormalField,
     struct_name: &Literal,
 ) -> TokenStream {
     let field_name = proc_macro2::Literal::string(&ident.to_string());
-    if let Some(bits) = bits {
-        let utype = arbitrary_uint(bits, out_ty.span());
+    if let Some(int) = arbitrary_int {
+        let int_ty = arbitrary_int_ty(*int, out_ty.span());
         quote_spanned! {out_ty.span()=>
-            let #ident = #utype::read_abstract_bits(reader)
+            let #ident = #int_ty::read_abstract_bits(reader)
                 .map_err(|cause| cause.read_option(#struct_name, #field_name))?;
             let #ident = #ident.value();
         }
@@ -52,10 +52,10 @@ pub fn read(
 
 pub fn write(field: &NormalField) -> TokenStream {
     let field_ident = &field.ident;
-    let write_code = if let Some(bits) = field.bits {
-        let utype = arbitrary_uint(bits, field.out_ty.span());
+    let write_code = if let Some(int) = field.arbitrary_int {
+        let int_ty = arbitrary_int_ty(int, field.out_ty.span());
         quote_spanned! {field.out_ty.span()=>
-            let #field_ident = #utype::new(#field_ident);
+            let #field_ident = #int_ty::new(#field_ident);
             #field_ident.write_abstract_bits(writer)?;
         }
     } else {

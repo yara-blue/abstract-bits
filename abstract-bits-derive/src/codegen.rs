@@ -3,7 +3,7 @@ use quote::{ToTokens, TokenStreamExt, quote};
 use syn::spanned::Spanned;
 use syn::{Attribute, Ident, Visibility};
 
-use crate::model::{EmptyVariant, Field, Model};
+use crate::model::{ArbitraryInt, EmptyVariant, Field, Model};
 
 mod enumerate;
 mod fields;
@@ -189,6 +189,13 @@ pub fn arbitrary_uint(
     span: proc_macro2::Span,
 ) -> syn::Type {
     let ident = Ident::new(&format!("u{bits}"), span);
+    syn::parse_quote_spanned!(span=> ::abstract_bits::#ident)
+}
+
+/// Path to abstract-bits' re-exported `uN`/`iN` arbitrary-int type, e.g. `::abstract_bits::i7`.
+pub fn arbitrary_int_ty(int: ArbitraryInt, span: proc_macro2::Span) -> syn::Type {
+    let prefix = if int.signed { "i" } else { "u" };
+    let ident = Ident::new(&format!("{prefix}{}", int.bits), span);
     syn::parse_quote_spanned!(span=> ::abstract_bits::#ident)
 }
 

@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote_spanned;
 use syn::Ident;
 
-use crate::codegen::arbitrary_uint;
+use crate::codegen::arbitrary_int_ty;
 use crate::model::NormalField;
 
 /// Derive the controller's value from the field it controls and write it: an
@@ -16,8 +16,8 @@ pub fn write(field: &NormalField, controlled: &Ident, presence: bool) -> TokenSt
         };
     }
 
-    if let Some(bits) = field.bits {
-        let utype = arbitrary_uint(bits, ident.span());
+    if let Some(int) = field.arbitrary_int {
+        let utype = arbitrary_int_ty(int, ident.span());
         quote_spanned! {ident.span()=>
             let len: #utype = self.#controlled.len().try_into().ok()
                 .and_then(|len| #utype::try_new(len).ok())
