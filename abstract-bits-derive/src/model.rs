@@ -37,27 +37,38 @@ pub struct NormalField {
     pub attrs: Vec<Attribute>,
     pub ident: Ident,
     pub out_ty: syn::Type,
-    pub bits: Option<u8>,
+    pub arbitrary_int: Option<ArbitraryInt>,
 }
 
-fn out_ty_from_padding(padding: u8, span: Span) -> syn::Type {
-    match padding {
-        1..=8 => parse_quote_spanned!(span =>u8),
-        9..=16 => parse_quote_spanned!(span =>u16),
-        17..=32 => parse_quote_spanned!(span =>u32),
-        33..=64 => parse_quote_spanned!(span =>u64),
+/// A `u<N>`/`i<N>` field type that is not a native rust integer
+#[derive(Debug, Clone, Copy)]
+pub struct ArbitraryInt {
+    pub bits: usize,
+    pub signed: bool,
+}
+
+fn out_ty_from_arbitrary_int(int: ArbitraryInt, span: Span) -> syn::Type {
+    match (int.signed, int.bits) {
+        (false, 1..=8) => parse_quote_spanned!(span =>u8),
+        (false, 9..=16) => parse_quote_spanned!(span =>u16),
+        (false, 17..=32) => parse_quote_spanned!(span =>u32),
+        (false, 33..=64) => parse_quote_spanned!(span =>u64),
+        (true, 1..=8) => parse_quote_spanned!(span =>i8),
+        (true, 9..=16) => parse_quote_spanned!(span =>i16),
+        (true, 17..=32) => parse_quote_spanned!(span =>i32),
+        (true, 33..=64) => parse_quote_spanned!(span =>i64),
         _other => abort!(span, "unsupported field size"),
     }
 }
 
 impl NormalField {
     fn from(field: syn::Field) -> Self {
-        let mut bits = None;
+        let mut arbitrary_int = None;
         let mut out_ty = field.ty.clone();
-        if let Ok(padding) = padding_from_type(&field.ty) {
-            if padding != 8 && padding != 16 && padding != 32 && padding != 64 {
-                out_ty = out_ty_from_padding(padding, field.ty.span());
-                bits = Some(padding);
+        if let Ok(int) = arbitrary_int_from_type(&field.ty) {
+            if int.bits != 8 && int.bits != 16 && int.bits != 32 && int.bits != 64 {
+                out_ty = out_ty_from_arbitrary_int(int, field.ty.span());
+                arbitrary_int = Some(int);
             }
         }
 
@@ -66,7 +77,7 @@ impl NormalField {
             attrs: field.attrs,
             ident: field.ident.expect("unit struct not handled by NormalField"),
             out_ty,
-            bits,
+            arbitrary_int,
         }
     }
 }
@@ -137,7 +148,7 @@ impl Field {
                     .clone()
                     .expect("code is not run for unit structs"),
                 out_ty: field.ty.clone(),
-                bits: None,
+                arbitrary_int: None,
             }),
             _ => None,
         }
@@ -156,6 +167,30 @@ fn padding_from_type(ty: &syn::Type) -> Result<u8, (&'static str, Span)> {
             "field did not start with u and/or did not end in number",
             end.ident.span(),
         )),
+    }
+}
+
+fn arbitrary_int_from_type(ty: &syn::Type) -> Result<ArbitraryInt, (&'static str, Span)> {
+    let syn::Type::Path(ty) = ty else {
+        abort!(ty.span(), "only normal types are supported");
+    };
+
+    let end = ty.path.segments.last().expect("type can not be empty");
+    let name = end.ident.to_string();
+    let error = (
+        "field did not start with u or i and/or did not end in number",
+        end.ident.span(),
+    );
+
+    let signed = match name.chars().next() {
+        Some('u') => false,
+        Some('i') => true,
+        _ => return Err(error),
+    };
+
+    match name[1..].parse() {
+        Ok(bits) => Ok(ArbitraryInt { bits, signed }),
+        Err(_) => Err(error),
     }
 }
 
@@ -228,7 +263,7 @@ impl Field {
 
                 let inner_type = NormalField::from(vec_stripped);
                 let mut full_type = NormalField::from(field);
-                if inner_type.bits.is_some() {
+                if inner_type.arbitrary_int.is_some() {
                     let inner_out_ty = &inner_type.out_ty;
                     full_type.out_ty = parse_quote_spanned!(
                         inner_out_ty.span()=> Vec<#inner_out_ty>
@@ -291,8 +326,15 @@ fn max_size_from_controller_field(
     let ident = controller_in_previous_fields(previous_fields, controller_ident);
 
     // Compute the size
-    if let Some(bits) = ident.bits {
-        2usize.pow(bits as u32)
+    if let Some(int) = ident.arbitrary_int {
+        if int.signed {
+            abort!(
+                controller_ident.span(),
+                "Controller field '{}' must be unsigned",
+                controller_ident
+            );
+        }
+        2usize.pow(int.bits as u32)
     } else {
         if let Ok(bits) = padding_from_type(&ident.out_ty) {
             2usize.pow(bits as u32)

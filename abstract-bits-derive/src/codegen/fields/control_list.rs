@@ -2,7 +2,8 @@ use proc_macro2::{Literal, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::Ident;
 
-use crate::codegen::{arbitrary_uint, is_primitive, list_len_ident};
+use crate::codegen::{arbitrary_int_ty, is_primitive, list_len_ident};
+use crate::model::ArbitraryInt;
 
 pub fn read(controlled: &Ident, bits: usize, struct_name: &Literal) -> TokenStream {
     let list_name = Literal::string(&controlled.to_string());
@@ -13,7 +14,7 @@ pub fn read(controlled: &Ident, bits: usize, struct_name: &Literal) -> TokenStre
                 .map_err(|cause| cause.read_list_length(#struct_name, #list_name))?;
         }
     } else {
-        let utype = arbitrary_uint(bits, controlled.span());
+        let utype = arbitrary_int_ty(ArbitraryInt { bits, signed: false }, controlled.span());
         quote_spanned! {controlled.span()=>
             let #len_ident = #utype::read_abstract_bits(reader)
                 .map_err(|cause| cause.read_list_length(#struct_name, #list_name))?;
@@ -34,7 +35,7 @@ pub fn write(controlled: &Ident, bits: usize) -> TokenStream {
             ::abstract_bits::AbstractBits::write_abstract_bits(&#len_ident, writer)?;
         }
     } else {
-        let utype = arbitrary_uint(bits, controlled.span());
+        let utype = arbitrary_int_ty(ArbitraryInt { bits, signed: false }, controlled.span());
         quote_spanned! {controlled.span()=>
             let #len_ident = self.#controlled.len().try_into()
                 .map_err(|_| ::abstract_bits::ToBytesError::ListTooLong {

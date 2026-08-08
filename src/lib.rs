@@ -6,6 +6,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 pub use abstract_bits_derive::abstract_bits;
+pub use arbitrary_int::traits::Integer;
 pub use arbitrary_int::*;
 pub use bitvec;
 use bitvec::order::Lsb0;
@@ -65,9 +66,9 @@ pub trait AbstractBits {
     }
 }
 
-macro_rules! impl_abstract_bits_for_UInt {
-    ($base_type:ty, $write_method:ident, $read_method: ident) => {
-        impl<const N: usize> AbstractBits for arbitrary_int::UInt<$base_type, N> {
+macro_rules! impl_abstract_bits_for_arbitrary_int {
+    ($wrapper:ident, $base_type:ty, $write_method:ident, $read_method: ident) => {
+        impl<const N: usize> AbstractBits for arbitrary_int::$wrapper<$base_type, N> {
             const MIN_BITS: usize = Self::BITS;
             const MAX_BITS: usize = Self::BITS;
 
@@ -76,7 +77,7 @@ macro_rules! impl_abstract_bits_for_UInt {
                 writer: &mut BitWriter,
             ) -> Result<(), ToBytesError> {
                 writer
-                    .$write_method(Self::BITS, self.value())
+                    .$write_method(Self::BITS, self.to_unsigned().value())
                     .map_err(|cause| ToBytesError::BufferTooSmall {
                         ty: core::any::type_name::<Self>(),
                         cause,
@@ -88,22 +89,29 @@ macro_rules! impl_abstract_bits_for_UInt {
                 Self: Sized,
             {
                 use FromBytesError::ReadPrimitive;
-                let value = reader.$read_method(Self::BITS).map_err(|cause| {
+                let raw = reader.$read_method(Self::BITS).map_err(|cause| {
                     ReadPrimitive(ReadErrorCause::NotEnoughInput {
                         ty: core::any::type_name::<Self>(),
                         cause,
                     })
                 })?;
-                Ok(Self::new(value))
+                // sign-extends the raw two's complement pattern for signed types
+                Ok(Self::from_unsigned(
+                    <Self as Integer>::UnsignedInteger::new(raw),
+                ))
             }
         }
     };
 }
 
-impl_abstract_bits_for_UInt! {u8, write_u8, read_u8}
-impl_abstract_bits_for_UInt! {u16, write_u16, read_u16}
-impl_abstract_bits_for_UInt! {u32, write_u32, read_u32}
-impl_abstract_bits_for_UInt! {u64, write_u64, read_u64}
+impl_abstract_bits_for_arbitrary_int! {UInt, u8, write_u8, read_u8}
+impl_abstract_bits_for_arbitrary_int! {UInt, u16, write_u16, read_u16}
+impl_abstract_bits_for_arbitrary_int! {UInt, u32, write_u32, read_u32}
+impl_abstract_bits_for_arbitrary_int! {UInt, u64, write_u64, read_u64}
+impl_abstract_bits_for_arbitrary_int! {Int, i8, write_u8, read_u8}
+impl_abstract_bits_for_arbitrary_int! {Int, i16, write_u16, read_u16}
+impl_abstract_bits_for_arbitrary_int! {Int, i32, write_u32, read_u32}
+impl_abstract_bits_for_arbitrary_int! {Int, i64, write_u64, read_u64}
 
 macro_rules! impl_abstract_bits_for_core_int {
     ($type:ty, $write_method:ident, $read_method:ident, $bits:literal) => {
@@ -143,6 +151,10 @@ impl_abstract_bits_for_core_int! {u8, write_u8, read_u8, 8}
 impl_abstract_bits_for_core_int! {u16, write_u16, read_u16, 16}
 impl_abstract_bits_for_core_int! {u32, write_u32, read_u32, 32}
 impl_abstract_bits_for_core_int! {u64, write_u64, read_u64, 64}
+impl_abstract_bits_for_core_int! {i8, write_i8, read_i8, 8}
+impl_abstract_bits_for_core_int! {i16, write_i16, read_i16, 16}
+impl_abstract_bits_for_core_int! {i32, write_i32, read_i32, 32}
+impl_abstract_bits_for_core_int! {i64, write_i64, read_i64, 64}
 
 impl AbstractBits for bool {
     const MIN_BITS: usize = 1;
@@ -264,6 +276,10 @@ impl BitReader<'_> {
     read_primitive! {read_u16, u16}
     read_primitive! {read_u32, u32}
     read_primitive! {read_u64, u64}
+    read_primitive! {read_i8, i8}
+    read_primitive! {read_i16, i16}
+    read_primitive! {read_i32, i32}
+    read_primitive! {read_i64, i64}
 }
 
 impl BitReader<'_> {
@@ -365,6 +381,10 @@ impl BitWriter<'_> {
     write_primitive!(write_u16, u16);
     write_primitive!(write_u32, u32);
     write_primitive!(write_u64, u64);
+    write_primitive!(write_i8, i8);
+    write_primitive!(write_i16, i16);
+    write_primitive!(write_i32, i32);
+    write_primitive!(write_i64, i64);
 }
 
 impl<'a> From<&'a mut [u8]> for BitWriter<'a> {
